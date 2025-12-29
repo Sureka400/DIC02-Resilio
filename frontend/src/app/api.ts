@@ -33,7 +33,8 @@ export const authAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Registration failed');
+      const data = await response.json();
+      throw new Error(data.message || (data.errors && data.errors[0].msg) || 'Registration failed');
     }
 
     const data = await response.json();
@@ -53,7 +54,8 @@ export const authAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Login failed');
+      const data = await response.json();
+      throw new Error(data.message || (data.errors && data.errors[0].msg) || 'Login failed');
     }
 
     const data = await response.json();
@@ -75,6 +77,303 @@ export const authAPI = {
       throw new Error('Failed to get profile');
     }
 
+    return response.json();
+  },
+};
+
+// Course API
+export const courseAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/courses`);
+    if (!response.ok) throw new Error('Failed to fetch courses');
+    return response.json();
+  },
+
+  getById: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/courses/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch course details');
+    return response.json();
+  },
+
+  join: async (classCode: string) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/courses/join`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ classCode }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to join course');
+    }
+    return response.json();
+  },
+
+  getAssignments: async (courseId: string) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/assignments`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch assignments');
+    return response.json();
+  },
+
+  getMaterials: async (courseId: string) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/materials`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch materials');
+    return response.json();
+  },
+};
+
+// Teacher API
+export const teacherAPI = {
+  getDashboard: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/dashboard`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch dashboard data');
+    return response.json();
+  },
+
+  getCourses: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/courses`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch courses');
+    return response.json();
+  },
+
+  getProfile: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/profile`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch profile');
+    return response.json();
+  },
+
+  updateProfile: async (profileData: any) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update profile');
+    }
+    return response.json();
+  },
+
+  createCourse: async (courseData: any) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/courses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(courseData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || error.message || 'Failed to create course');
+    }
+    return response.json();
+  },
+
+  createAssignment: async (courseId: string, assignmentData: any) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/courses/${courseId}/assignments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(assignmentData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || error.message || 'Failed to create assignment');
+    }
+    return response.json();
+  },
+
+  getAssignments: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/assignments`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch assignments');
+    return response.json();
+  },
+
+  deleteCourse: async (courseId: string) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/courses/${courseId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to delete course');
+    }
+    return response.json();
+  },
+
+  uploadMaterial: async (courseId: string, materialData: { title: string; description: string; file?: File | null; url?: string }) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('title', materialData.title);
+    formData.append('description', materialData.description);
+    if (materialData.file) {
+      formData.append('file', materialData.file);
+    }
+    if (materialData.url) {
+      formData.append('url', materialData.url);
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/teachers/courses/${courseId}/materials`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to upload material');
+    }
+    return response.json();
+  },
+
+  getMaterials: async (courseId: string) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/courses/${courseId}/materials`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch materials');
+    return response.json();
+  },
+
+  deleteMaterial: async (materialId: string) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/teachers/materials/${materialId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to delete material');
+    }
+    return response.json();
+  },
+};
+
+// Student API
+export const studentAPI = {
+  getDashboard: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/students/dashboard`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch student dashboard');
+    return response.json();
+  },
+
+  getCourses: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/students/courses`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch courses');
+    return response.json();
+  },
+
+  getProfile: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/students/profile`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch profile');
+    return response.json();
+  },
+
+  updateProfile: async (profileData: any) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/students/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update profile');
+    }
+    return response.json();
+  },
+
+  getAssignments: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/students/assignments`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch assignments');
+    return response.json();
+  },
+
+  submitAssignment: async (assignmentId: string, submissionData: any) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(submissionData),
+    });
+    if (!response.ok) throw new Error('Failed to submit assignment');
     return response.json();
   },
 };

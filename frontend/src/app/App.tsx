@@ -5,21 +5,30 @@ import { LoginPage } from './components/LoginPage';
 import { StudentLogin } from './components/StudentLogin';
 import { TeacherLogin } from './components/TeacherLogin';
 import { AdminLogin } from './components/AdminLogin';
+import { SignupPage } from './components/SignupPage';
 import { StudentDashboard } from './components/StudentDashboard';
 import { TeacherDashboard } from './components/TeacherDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
+import { ClassroomManagement } from './components/ClassroomManagement';
+import { ClassroomView } from './components/ClassroomView';
+import { StudentClasses } from './components/StudentClasses';
 import { GlitterEffect } from './components/GlitterEffect';
 import { clearAuthToken } from './api';
 
-type View = 'landing' | 'login' | 'student-login' | 'teacher-login' | 'admin-login' | 'student' | 'teacher' | 'admin';
+type View = 'landing' | 'login' | 'signup' | 'student-login' | 'teacher-login' | 'admin-login' | 'student' | 'teacher' | 'admin' | 'classroom-management' | 'classroom-view' | 'student-classes';
 type Role = 'student' | 'teacher' | 'admin' | null;
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [userRole, setUserRole] = useState<Role>(null);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
 
   const handleGetStarted = () => {
     setCurrentView('login');
+  };
+
+  const handleSignup = () => {
+    setCurrentView('signup');
   };
 
   const handleRoleSelect = (role: Role) => {
@@ -35,6 +44,13 @@ export default function App() {
     if (userRole === 'admin') setCurrentView('admin');
   };
 
+  const handleSignupSuccess = (role: 'student' | 'teacher' | 'admin') => {
+    setUserRole(role);
+    if (role === 'student') setCurrentView('student');
+    if (role === 'teacher') setCurrentView('teacher');
+    if (role === 'admin') setCurrentView('admin');
+  };
+
   const handleBackToRoleSelect = () => {
     setCurrentView('login');
     setUserRole(null);
@@ -44,6 +60,26 @@ export default function App() {
     clearAuthToken();
     setCurrentView('landing');
     setUserRole(null);
+  };
+
+  const handleManageClass = (course: any) => {
+    setSelectedCourse(course);
+    setCurrentView('classroom-management');
+  };
+
+  const handleEnterClassroom = (course: any) => {
+    setSelectedCourse(course);
+    setCurrentView('classroom-view');
+  };
+
+  const handleGoToClasses = () => {
+    setCurrentView('student-classes');
+  };
+
+  const handleBackToDashboard = () => {
+    setSelectedCourse(null);
+    if (userRole === 'student') setCurrentView('student');
+    if (userRole === 'teacher') setCurrentView('teacher');
   };
 
   return (
@@ -59,7 +95,7 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <LandingPage onGetStarted={handleGetStarted} />
+            <LandingPage onGetStarted={handleGetStarted} onSignup={handleSignup} />
           </motion.div>
         )}
 
@@ -71,7 +107,19 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <LoginPage onRoleSelect={handleRoleSelect} />
+            <LoginPage onRoleSelect={handleRoleSelect} onSignup={handleSignup} />
+          </motion.div>
+        )}
+
+        {currentView === 'signup' && (
+          <motion.div
+            key="signup"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <SignupPage onSignupSuccess={handleSignupSuccess} onBack={() => setCurrentView('login')} />
           </motion.div>
         )}
 
@@ -83,7 +131,11 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <StudentLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} />
+            <StudentLogin 
+              onLogin={handleLoginSuccess} 
+              onBack={handleBackToRoleSelect} 
+              onSignup={handleSignup}
+            />
           </motion.div>
         )}
 
@@ -95,7 +147,11 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <TeacherLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} />
+            <TeacherLogin 
+              onLogin={handleLoginSuccess} 
+              onBack={handleBackToRoleSelect} 
+              onSignup={handleSignup}
+            />
           </motion.div>
         )}
 
@@ -107,7 +163,11 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <AdminLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} />
+            <AdminLogin 
+              onLogin={handleLoginSuccess} 
+              onBack={handleBackToRoleSelect} 
+              onSignup={handleSignup}
+            />
           </motion.div>
         )}
 
@@ -119,7 +179,7 @@ export default function App() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <StudentDashboard onLogout={handleLogout} />
+            <StudentDashboard onLogout={handleLogout} onEnterClassroom={handleEnterClassroom} onGoToClasses={handleGoToClasses} />
           </motion.div>
         )}
 
@@ -131,7 +191,7 @@ export default function App() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <TeacherDashboard onLogout={handleLogout} />
+            <TeacherDashboard onLogout={handleLogout} onManageClass={handleManageClass} />
           </motion.div>
         )}
 
@@ -144,6 +204,42 @@ export default function App() {
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
             <AdminDashboard onLogout={handleLogout} />
+          </motion.div>
+        )}
+
+        {currentView === 'classroom-management' && selectedCourse && (
+          <motion.div
+            key="classroom-management"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <ClassroomManagement course={selectedCourse} onBack={handleBackToDashboard} onLogout={handleLogout} />
+          </motion.div>
+        )}
+
+        {currentView === 'classroom-view' && selectedCourse && (
+          <motion.div
+            key="classroom-view"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <ClassroomView course={selectedCourse} onBack={handleBackToDashboard} onLogout={handleLogout} />
+          </motion.div>
+        )}
+
+        {currentView === 'student-classes' && (
+          <motion.div
+            key="student-classes"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <StudentClasses onEnterClassroom={handleEnterClassroom} onBack={() => setCurrentView('student')} onLogout={handleLogout} />
           </motion.div>
         )}
       </AnimatePresence>

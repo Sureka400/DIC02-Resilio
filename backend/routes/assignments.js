@@ -54,6 +54,48 @@ router.get('/:id/submissions', authenticate, requireTeacher, async (req, res) =>
   }
 });
 
+// Submit an assignment (student only)
+router.post('/:id/submit', authenticate, requireStudent, async (req, res) => {
+  try {
+    const { content, attachments } = req.body;
+    const studentId = req.user.id;
+
+    const assignment = await Assignment.findById(req.params.id);
+    if (!assignment) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+
+    // Check if student is enrolled in the course
+    const course = await require('../models/Course').findById(assignment.course);
+    if (!course || !course.students.includes(studentId)) {
+      return res.status(403).json({ message: 'Access denied. Not enrolled in this course.' });
+    }
+
+    // Check if already submitted
+    const existingSubmission = assignment.submissions.find(
+      s => s.student.toString() === studentId
+    );
+
+    if (existingSubmission) {
+      return res.status(400).json({ message: 'Assignment already submitted' });
+    }
+
+    assignment.submissions.push({
+      student: studentId,
+      content,
+      attachments,
+      submittedAt: new Date()
+    });
+
+    await assignment.save();
+
+    res.json({ message: 'Assignment submitted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Update assignment (teacher only)
 router.put('/:id', authenticate, requireTeacher, async (req, res) => {
   try {

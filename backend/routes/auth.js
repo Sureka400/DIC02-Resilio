@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -113,11 +114,24 @@ router.post('/login', [
 });
 
 // Get current user profile
-router.get('/profile', async (req, res) => {
+router.get('/profile', authenticate, async (req, res) => {
   try {
-    // This would normally use middleware to verify token
-    // For now, return a placeholder
-    res.json({ message: 'Profile endpoint - implement authentication middleware' });
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profile: user.profile,
+      academicInfo: user.academicInfo,
+      status: user.status,
+      createdAt: user.createdAt
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

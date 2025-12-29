@@ -7,23 +7,30 @@ import { authAPI } from '../api';
 interface TeacherLoginProps {
   onLogin: () => void;
   onBack: () => void;
+  onSignup: () => void;
 }
 
-export function TeacherLogin({ onLogin, onBack }: TeacherLoginProps) {
+export function TeacherLogin({ onLogin, onBack, onSignup }: TeacherLoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // For testing purposes, allow any email/password combination
-    setTimeout(() => {
+    try {
+      await authAPI.login({ email, password });
       setIsLoading(false);
       onLogin();
-    }, 1000);
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,6 +63,7 @@ export function TeacherLogin({ onLogin, onBack }: TeacherLoginProps) {
                 </div>
                 <h2 className="text-2xl font-bold text-[#e8e6e1] mb-2">Teacher Login</h2>
                 <p className="text-[#a8a6a1]">Access your teaching dashboard</p>
+                {error && <p className="text-red-400 mt-4 text-sm bg-red-400/10 p-2 rounded">{error}</p>}
               </div>
 
               {/* Login Form */}
@@ -122,6 +130,18 @@ export function TeacherLogin({ onLogin, onBack }: TeacherLoginProps) {
                   )}
                 </button>
               </form>
+
+              <div className="mt-6 text-center text-sm">
+                <p className="text-[#a8a6a1]">
+                  Don't have an account?{' '}
+                  <button
+                    onClick={onSignup}
+                    className="text-[#FFD600] font-semibold hover:underline"
+                  >
+                    Sign up
+                  </button>
+                </p>
+              </div>
 
               {/* Demo Credentials */}
               <div className="mt-6 p-4 bg-[#1a1a1a] rounded-lg">

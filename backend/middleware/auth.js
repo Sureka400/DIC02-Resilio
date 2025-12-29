@@ -7,6 +7,7 @@ const authenticate = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
+      console.log('Auth failed: No token provided');
       return res.status(401).json({ message: 'No token provided' });
     }
 
@@ -14,6 +15,7 @@ const authenticate = async (req, res, next) => {
     const user = await User.findById(decoded.userId);
 
     if (!user) {
+      console.log('Auth failed: User not found for ID', decoded.userId);
       return res.status(401).json({ message: 'User not found' });
     }
 
@@ -24,8 +26,10 @@ const authenticate = async (req, res, next) => {
       email: user.email
     };
 
+    console.log(`Auth success: User ${user.email} with role ${user.role}`);
     next();
   } catch (error) {
+    console.error('Auth error:', error.message);
     res.status(401).json({ message: 'Invalid token' });
   }
 };
@@ -33,6 +37,7 @@ const authenticate = async (req, res, next) => {
 // Middleware to check if user is a student
 const requireStudent = (req, res, next) => {
   if (req.user.role !== 'student') {
+    console.log(`Access denied: Role ${req.user.role} is not student`);
     return res.status(403).json({ message: 'Access denied. Student role required.' });
   }
   next();
@@ -41,6 +46,7 @@ const requireStudent = (req, res, next) => {
 // Middleware to check if user is a teacher
 const requireTeacher = (req, res, next) => {
   if (req.user.role !== 'teacher') {
+    console.log(`Access denied: Role ${req.user.role} is not teacher`);
     return res.status(403).json({ message: 'Access denied. Teacher role required.' });
   }
   next();

@@ -6,9 +6,10 @@ type Role = 'student' | 'teacher' | 'admin' | null;
 
 interface LoginPageProps {
   onRoleSelect: (role: Role) => void;
+  onSignup: () => void;
 }
 
-export function LoginPage({ onRoleSelect }: LoginPageProps) {
+export function LoginPage({ onRoleSelect, onSignup }: LoginPageProps) {
   const roles = [
     {
       id: 'student' as Role,
@@ -114,6 +115,23 @@ export function LoginPage({ onRoleSelect }: LoginPageProps) {
             );
           })}
         </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="text-center mt-12"
+        >
+          <p className="text-[#a8a6a1]">
+            Don't have an account?{' '}
+            <button
+              onClick={onSignup}
+              className="text-[#FFD600] font-semibold hover:underline"
+            >
+              Sign up for the first time
+            </button>
+          </p>
+        </motion.div>
       </div>
     </div>
   );

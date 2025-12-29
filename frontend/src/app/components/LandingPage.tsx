@@ -4,9 +4,10 @@ import { GlassCard } from './GlassCard';
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  onSignup: () => void;
 }
 
-export function LandingPage({ onGetStarted }: LandingPageProps) {
+export function LandingPage({ onGetStarted, onSignup }: LandingPageProps) {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-6 py-12">
       <div className="gradient-overlay" />
@@ -58,18 +59,32 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             Experience the future of intelligent learning. Powerful, refined, and built for those who dare to lead.
           </motion.p>
 
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            onClick={onGetStarted}
-            className="btn-3d group inline-flex items-center gap-3 px-10 py-5 bg-[#FFD600] text-[#0a0a0a] rounded-2xl overflow-hidden relative"
-            style={{ fontSize: '1.125rem', fontWeight: 600 }}
-          >
-            <span className="relative z-10">Get Started</span>
-            <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#FFD600] to-[#FFB800] opacity-0 group-hover:opacity-100 transition-opacity" />
-          </motion.button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              onClick={onGetStarted}
+              className="btn-3d group inline-flex items-center gap-3 px-10 py-5 bg-[#FFD600] text-[#0a0a0a] rounded-2xl overflow-hidden relative w-full sm:w-auto"
+              style={{ fontSize: '1.125rem', fontWeight: 600 }}
+            >
+              <span className="relative z-10">Get Started</span>
+              <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#FFD600] to-[#FFB800] opacity-0 group-hover:opacity-100 transition-opacity" />
+            </motion.button>
+
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.7 }}
+              onClick={onSignup}
+              className="btn-3d group inline-flex items-center gap-3 px-10 py-5 bg-[#1a1a1a] text-[#FFD600] border border-[#FFD600]/20 rounded-2xl overflow-hidden relative w-full sm:w-auto"
+              style={{ fontSize: '1.125rem', fontWeight: 600 }}
+            >
+              <span className="relative z-10">Sign Up</span>
+              <div className="absolute inset-0 bg-[#FFD600]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </motion.button>
+          </div>
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-8">

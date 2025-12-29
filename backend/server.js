@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const multer = require('multer');
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
@@ -41,11 +43,13 @@ try {
 } catch (error) {
   console.error('❌ Error loading chat route:', error.message);
 }
-// app.use('/api/students', require('./routes/students'));
-// app.use('/api/teachers', require('./routes/teachers'));
-// app.use('/api/courses', require('./routes/courses'));
-// app.use('/api/assignments', require('./routes/assignments'));
-// app.use('/api/chat', require('./routes/chat'));
+  app.use('/api/students', require('./routes/students'));
+  app.use('/api/teachers', require('./routes/teachers'));
+  app.use('/api/courses', require('./routes/courses'));
+  app.use('/api/assignments', require('./routes/assignments'));
+  app.use('/api/behavior', require('./routes/behavior'));
+  app.use('/api/profile', require('./routes/profile'));
+  app.use('/api/ai', require('./routes/ai'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -67,7 +71,10 @@ app.get('/api/test', (req, res) => {
       students: '/api/students',
       teachers: '/api/teachers',
       courses: '/api/courses',
-      assignments: '/api/assignments'
+      assignments: '/api/assignments',
+      behavior: '/api/behavior',
+      profile: '/api/profile',
+      ai: '/api/ai'
     }
   });
 });

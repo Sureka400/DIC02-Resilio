@@ -23,6 +23,11 @@ const courseSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  classCode: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   students: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

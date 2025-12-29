@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
@@ -13,20 +13,179 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  BookOpen
+  BookOpen,
+  Plus
 } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { TabNavigation } from './TabNavigation';
 import { ChartCard } from './ChartCard';
 import { ChatComponent } from './ChatComponent';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription 
+} from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from './ui/select';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { teacherAPI } from '../api';
 
 interface TeacherDashboardProps {
   onLogout: () => void;
+  onManageClass: (course: any) => void;
 }
 
-export function TeacherDashboard({ onLogout }: TeacherDashboardProps) {
+export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [courses, setCourses] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedProfile, setEditedProfile] = useState<any>(null);
+  
+  // Create Course Modal State
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [newCourse, setNewCourse] = useState({
+    title: '',
+    description: '',
+    subject: '',
+    grade: '',
+    classCode: '',
+    schedule: {
+      days: ['Monday', 'Wednesday', 'Friday'],
+      startTime: '09:00',
+      endTime: '10:30'
+    }
+  });
+
+  // Create Assignment Modal State
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [newAssignment, setNewAssignment] = useState({
+    courseId: '',
+    title: '',
+    description: '',
+    dueDate: '',
+    totalPoints: 100,
+    type: 'assignment'
+  });
+
+  // Class Code Display State
+  const [createdClassCode, setCreatedClassCode] = useState<string | null>(null);
+  const [createdClassName, setCreatedClassName] = useState<string>('');
+  
+  // Selected Assignment for Detail View
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [assignmentSubTab, setAssignmentSubTab] = useState<'submissions' | 'details' | 'analytics'>('submissions');
+  const [assignmentFilter, setAssignmentFilter] = useState<'active' | 'past' | 'draft'>('active');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await teacherAPI.getDashboard();
+      setDashboardData(data);
+      
+      const teacherProfile = await teacherAPI.getProfile();
+      setProfile(teacherProfile);
+      setEditedProfile(teacherProfile);
+      
+      const teacherCourses = await teacherAPI.getCourses();
+      setCourses(teacherCourses);
+      
+      const teacherAssignments = await teacherAPI.getAssignments();
+      setAssignments(teacherAssignments.map((a: any) => ({ 
+        ...a, 
+        courseTitle: a.course?.title || 'Unknown Course' 
+      })));
+    } catch (error) {
+      console.error('Error fetching teacher data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const createdCourse = await teacherAPI.createCourse(newCourse);
+      setIsCourseModalOpen(false);
+      setCreatedClassCode(createdCourse.classCode);
+      setCreatedClassName(newCourse.title);
+      setNewCourse({
+        title: '',
+        description: '',
+        subject: '',
+        grade: '',
+        classCode: '',
+        schedule: {
+          days: ['Monday', 'Wednesday', 'Friday'],
+          startTime: '09:00',
+          endTime: '10:30'
+        }
+      });
+      fetchData();
+    } catch (error: any) {
+      console.error('Error creating course:', error);
+      const errorMsg = error.message || 'Unknown error';
+      if (errorMsg.includes('already in use')) {
+        alert(`❌ ${errorMsg}`);
+      } else {
+        alert(`Failed to create class: ${errorMsg}`);
+      }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const updated = await teacherAPI.updateProfile({
+        name: editedProfile.name,
+        profile: editedProfile.profile,
+        academicInfo: editedProfile.academicInfo
+      });
+      setProfile(updated.teacher);
+      setIsEditingProfile(false);
+      alert('✅ Profile updated successfully!');
+    } catch (error: any) {
+      alert(`❌ Error updating profile: ${error.message}`);
+    }
+  };
+
+  const handleCreateAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { courseId, ...assignmentData } = newAssignment;
+      await teacherAPI.createAssignment(courseId, assignmentData);
+      setIsAssignmentModalOpen(false);
+      setNewAssignment({
+        courseId: '',
+        title: '',
+        description: '',
+        dueDate: '',
+        totalPoints: 100,
+        type: 'assignment'
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      alert('Failed to create assignment');
+    }
+  };
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -111,10 +270,10 @@ export function TeacherDashboard({ onLogout }: TeacherDashboardProps) {
               {/* Quick Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 {[
-                  { label: 'Total Students', value: '84', icon: Users },
-                  { label: 'Active Classes', value: '5', icon: FileText },
-                  { label: 'Avg Engagement', value: '86%', icon: TrendingUp },
-                  { label: 'Messages', value: '8', icon: MessageSquare },
+                  { label: 'Total Students', value: dashboardData?.studentsCount?.toString() || '0', icon: Users },
+                  { label: 'Active Classes', value: dashboardData?.coursesCount?.toString() || '0', icon: FileText },
+                  { label: 'To Grade', value: dashboardData?.pendingAssignmentsCount?.toString() || '0', icon: CheckCircle },
+                  { label: 'Performance', value: '94%', icon: TrendingUp },
                 ].map((stat, index) => {
                   const Icon = stat.icon;
                   return (
@@ -333,56 +492,25 @@ export function TeacherDashboard({ onLogout }: TeacherDashboardProps) {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold text-[#FFD600]">Your Classes</h2>
+                <button 
+                  onClick={() => setIsCourseModalOpen(true)}
+                  className="btn-3d flex items-center gap-2 px-6 py-2 bg-[#FFD600] text-black rounded-lg font-bold hover:bg-[#FFD600]/90 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Create Class</span>
+                </button>
+              </div>
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {[
-                  {
-                    title: 'Mathematics 101',
-                    code: 'MATH-101',
-                    students: 32,
-                    schedule: 'Mon, Wed 9:00 AM',
-                    room: 'Room 204',
-                    avgGrade: '85%',
-                    nextClass: 'Today, 9:00 AM'
-                  },
-                  {
-                    title: 'Physics Advanced',
-                    code: 'PHYS-201',
-                    students: 24,
-                    schedule: 'Tue, Thu 2:00 PM',
-                    room: 'Lab 301',
-                    avgGrade: '78%',
-                    nextClass: 'Tomorrow, 2:00 PM'
-                  },
-                  {
-                    title: 'Computer Science',
-                    code: 'CS-201',
-                    students: 28,
-                    schedule: 'Mon, Wed, Fri 1:00 PM',
-                    room: 'Room 105',
-                    avgGrade: '92%',
-                    nextClass: 'Friday, 1:00 PM'
-                  },
-                  {
-                    title: 'Chemistry Lab',
-                    code: 'CHEM-101',
-                    students: 20,
-                    schedule: 'Wed, Fri 3:00 PM',
-                    room: 'Lab 402',
-                    avgGrade: '88%',
-                    nextClass: 'Wednesday, 3:00 PM'
-                  },
-                  {
-                    title: 'English Literature',
-                    code: 'ENG-201',
-                    students: 30,
-                    schedule: 'Tue, Thu 11:00 AM',
-                    room: 'Room 112',
-                    avgGrade: '82%',
-                    nextClass: 'Tuesday, 11:00 AM'
-                  }
-                ].map((course, index) => (
+                {courses.length === 0 ? (
+                  <div className="col-span-full text-center py-12">
+                    <p className="text-[#a8a6a1]">You haven't created any classes yet.</p>
+                  </div>
+                ) : courses.map((course, index) => (
                   <motion.div
-                    key={course.title}
+                    key={course._id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
@@ -392,96 +520,38 @@ export function TeacherDashboard({ onLogout }: TeacherDashboardProps) {
                         <div className="flex items-start justify-between mb-4">
                           <div>
                             <h3 className="text-[#e8e6e1] font-semibold mb-1">{course.title}</h3>
-                            <p className="text-[#a8a6a1] text-sm">{course.code}</p>
+                            <p className="text-[#FFD600] text-sm font-bold">Code: {course.classCode}</p>
                           </div>
-                          <div className="text-right">
-                            <div className="text-[#FFD600] font-bold">{course.avgGrade}</div>
-                            <div className="text-[#a8a6a1] text-xs">Avg Grade</div>
+                          <div className="p-2 rounded-lg bg-[#FFD600]/10">
+                            <Users className="w-5 h-5 text-[#FFD600]" />
                           </div>
                         </div>
 
-                        <div className="space-y-2 mb-4">
+                        <div className="space-y-2 mb-6">
                           <div className="flex justify-between text-sm">
                             <span className="text-[#a8a6a1]">Students:</span>
-                            <span className="text-[#e8e6e1]">{course.students}</span>
+                            <span className="text-[#e8e6e1]">{course.students?.length || 0}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-[#a8a6a1]">Subject:</span>
+                            <span className="text-[#e8e6e1]">{course.subject}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-[#a8a6a1]">Schedule:</span>
-                            <span className="text-[#e8e6e1]">{course.schedule}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Room:</span>
-                            <span className="text-[#e8e6e1]">{course.room}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Next Class:</span>
-                            <span className="text-[#FFD600]">{course.nextClass}</span>
+                            <span className="text-[#e8e6e1]">{course.schedule?.startTime} - {course.schedule?.endTime}</span>
                           </div>
                         </div>
 
-                        <div className="flex gap-3">
-                          <button className="flex-1 btn-3d bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors">
-                            Start Class
-                          </button>
-                          <button className="btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-4 rounded-lg hover:bg-[#2a2a2a] transition-colors">
-                            <Users className="w-4 h-4" />
-                          </button>
-                        </div>
+                        <button 
+                          onClick={() => onManageClass(course)}
+                          className="w-full btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                        >
+                          Manage Class
+                        </button>
                       </div>
                     </GlassCard>
                   </motion.div>
                 ))}
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <ChartCard title="Class Performance Overview">
-                  <div className="space-y-4">
-                    {[
-                      { subject: 'Mathematics 101', avgGrade: 85, attendance: 92, submissions: 88 },
-                      { subject: 'Physics Advanced', avgGrade: 78, attendance: 88, submissions: 85 },
-                      { subject: 'Computer Science', avgGrade: 92, attendance: 95, submissions: 90 },
-                      { subject: 'Chemistry Lab', avgGrade: 88, attendance: 90, submissions: 87 },
-                      { subject: 'English Literature', avgGrade: 82, attendance: 89, submissions: 84 }
-                    ].map((item, idx) => (
-                      <div key={idx} className="p-4 bg-[#1a1a1a] rounded-xl">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-[#e8e6e1] font-medium">{item.subject}</span>
-                          <span className="text-[#FFD600] font-bold">{item.avgGrade}%</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-[#a8a6a1]">Attendance:</span>
-                            <span className="text-[#e8e6e1] ml-2">{item.attendance}%</span>
-                          </div>
-                          <div>
-                            <span className="text-[#a8a6a1]">Submissions:</span>
-                            <span className="text-[#e8e6e1] ml-2">{item.submissions}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ChartCard>
-
-                <ChartCard title="Quick Actions">
-                  <div className="space-y-3">
-                    {[
-                      { action: 'Create New Assignment', icon: FileText },
-                      { action: 'Send Announcement', icon: MessageSquare },
-                      { action: 'Grade Submissions', icon: CheckCircle },
-                      { action: 'Schedule Office Hours', icon: Calendar },
-                      { action: 'Export Class Report', icon: BarChart3 }
-                    ].map((item, idx) => {
-                      const Icon = item.icon;
-                      return (
-                        <button key={idx} className="w-full flex items-center gap-3 p-4 bg-[#1a1a1a] text-[#e8e6e1] rounded-xl hover:bg-[#2a2a2a] transition-colors">
-                          <Icon className="w-5 h-5 text-[#FFD600]" />
-                          <span>{item.action}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ChartCard>
               </div>
             </motion.div>
           )}
@@ -494,93 +564,294 @@ export function TeacherDashboard({ onLogout }: TeacherDashboardProps) {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              <div className="grid md:grid-cols-2 gap-6 mb-8">
-                <ChartCard title="Assignment Overview">
-                  <div className="space-y-4">
-                    {[
-                      { title: 'Math Quiz #3', class: 'Mathematics 101', dueDate: 'Dec 28, 2025', submitted: 28, total: 32, avgGrade: '84%' },
-                      { title: 'Physics Lab Report', class: 'Physics Advanced', dueDate: 'Dec 30, 2025', submitted: 20, total: 24, avgGrade: '78%' },
-                      { title: 'Algorithm Implementation', class: 'Computer Science', dueDate: 'Dec 26, 2025', submitted: 24, total: 28, avgGrade: '91%' },
-                      { title: 'Chemical Reactions Lab', class: 'Chemistry Lab', dueDate: 'Dec 29, 2025', submitted: 18, total: 20, avgGrade: '86%' },
-                      { title: 'Shakespeare Essay', class: 'English Literature', dueDate: 'Jan 2, 2026', submitted: 25, total: 30, avgGrade: '82%' }
-                    ].map((assignment, idx) => (
-                      <div key={idx} className="p-4 bg-[#1a1a1a] rounded-xl">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <h4 className="text-[#e8e6e1] font-medium">{assignment.title}</h4>
-                            <p className="text-[#a8a6a1] text-sm">{assignment.class}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-[#FFD600] font-bold">{assignment.avgGrade}</div>
-                            <div className="text-[#a8a6a1] text-xs">Avg Grade</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between text-sm mb-2">
-                          <span className="text-[#a8a6a1]">Due: {assignment.dueDate}</span>
-                          <span className="text-[#e8e6e1]">{assignment.submitted}/{assignment.total} submitted</span>
-                        </div>
-                        <div className="w-full bg-[#0a0a0a] rounded-full h-2">
-                          <div
-                            className="bg-[#FFD600] h-2 rounded-full transition-all duration-1000"
-                            style={{ width: `${(assignment.submitted / assignment.total) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ChartCard>
-
-                <ChartCard title="Recent Submissions">
-                  <div className="space-y-3">
-                    {[
-                      { student: 'Alice Johnson', assignment: 'Math Quiz #3', submitted: '2 hours ago', grade: '95/100' },
-                      { student: 'Bob Smith', assignment: 'Physics Lab Report', submitted: '4 hours ago', grade: 'Pending' },
-                      { student: 'Charlie Brown', assignment: 'Algorithm Implementation', submitted: '6 hours ago', grade: '88/100' },
-                      { student: 'Diana Prince', assignment: 'Chemical Reactions Lab', submitted: '1 day ago', grade: '92/100' },
-                      { student: 'Eve Wilson', assignment: 'Shakespeare Essay', submitted: '2 days ago', grade: 'Pending' }
-                    ].map((submission, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-[#FFD600] flex items-center justify-center">
-                              <span className="text-black text-xs font-bold">
-                                {submission.student.split(' ').map(n => n[0]).join('')}
-                              </span>
+              {!selectedAssignment ? (
+                <>
+                  <div className="grid md:grid-cols-2 gap-6 mb-8">
+                    <ChartCard title="Class Performance Overview">
+                      <div className="space-y-4">
+                        {courses.length === 0 ? (
+                          <p className="text-[#a8a6a1] text-center py-4">No courses yet</p>
+                        ) : courses.slice(0, 5).map((course, idx) => (
+                          <div key={idx} className="p-4 bg-[#1a1a1a] rounded-xl">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-[#e8e6e1] font-medium">{course.title}</span>
+                              <span className="text-[#FFD600] font-bold">{course.grade || 'N/A'}</span>
                             </div>
-                            <div>
-                              <p className="text-[#e8e6e1] text-sm font-medium">{submission.student}</p>
-                              <p className="text-[#a8a6a1] text-xs">{submission.assignment}</p>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-[#a8a6a1]">Students:</span>
+                                <span className="text-[#e8e6e1] ml-2">{course.students?.length || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-[#a8a6a1]">Subject:</span>
+                                <span className="text-[#e8e6e1] ml-2">{course.subject}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[#FFD600] text-sm font-medium">{submission.grade}</p>
-                          <p className="text-[#a8a6a1] text-xs">{submission.submitted}</p>
-                        </div>
+                        ))}
                       </div>
+                    </ChartCard>
+
+                    <ChartCard title="Quick Actions">
+                      <div className="space-y-3">
+                        {[
+                          { action: 'Create New Assignment', icon: FileText, onClick: () => setIsAssignmentModalOpen(true) },
+                          { action: 'View All Submissions', icon: CheckCircle, onClick: () => {
+                            if (assignments.length > 0) setSelectedAssignment(assignments[0]);
+                          }},
+                          { action: 'Assignment Analytics', icon: BarChart3, onClick: () => setActiveTab('analytics') },
+                          { action: 'Student Insights', icon: Users, onClick: () => setActiveTab('insights') },
+                        ].map((item, idx) => {
+                          const Icon = item.icon;
+                          return (
+                            <button 
+                              key={idx} 
+                              onClick={item.onClick}
+                              className="w-full flex items-center gap-3 p-4 bg-[#1a1a1a] text-[#e8e6e1] rounded-xl hover:bg-[#2a2a2a] transition-colors"
+                            >
+                              <Icon className="w-5 h-5 text-[#FFD600]" />
+                              <span>{item.action}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </ChartCard>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                    <h2 className="text-2xl font-bold text-[#FFD600]">Manage Assignments</h2>
+                    <div className="flex bg-[#1a1a1a] p-1 rounded-xl border border-[#FFD600]/10">
+                      {(['active', 'past', 'draft'] as const).map((filter) => (
+                        <button
+                          key={filter}
+                          onClick={() => setAssignmentFilter(filter)}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
+                            assignmentFilter === filter
+                              ? 'bg-[#FFD600] text-black shadow-lg'
+                              : 'text-[#a8a6a1] hover:text-[#e8e6e1]'
+                          }`}
+                        >
+                          {filter}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 mb-8">
+                    {assignments.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-[#a8a6a1]">No assignments found for this filter.</p>
+                      </div>
+                    ) : assignments.map((assignment, index) => (
+                      <motion.div
+                        key={assignment._id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.4, delay: index * 0.1 }}
+                      >
+                        <GlassCard>
+                          <div className="p-6">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-1">
+                                  <h3 className="text-[#e8e6e1] font-semibold">{assignment.title}</h3>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    new Date(assignment.dueDate) > new Date() ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                  }`}>
+                                    {new Date(assignment.dueDate) > new Date() ? 'Active' : 'Closed'}
+                                  </span>
+                                </div>
+                                <p className="text-[#FFD600] text-xs font-medium mb-2">{assignment.courseTitle}</p>
+                                <p className="text-[#a8a6a1] text-sm line-clamp-2">{assignment.description}</p>
+                              </div>
+                              <div className="text-right ml-4">
+                                <div className="text-[#FFD600] font-bold mb-1">Due: {new Date(assignment.dueDate).toLocaleDateString()}</div>
+                                <div className="text-[#a8a6a1] text-sm flex items-center justify-end gap-1">
+                                  <Users className="w-3 h-3" />
+                                  {assignment.submissions?.length || 0} Submissions
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-3">
+                              <button 
+                                onClick={() => {
+                                  setSelectedAssignment(assignment);
+                                  setAssignmentSubTab('submissions');
+                                }}
+                                className="btn-3d bg-[#FFD600] text-black font-bold py-2 px-6 rounded-lg hover:bg-[#FFD600]/90 transition-colors text-sm"
+                              >
+                                View Submissions
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setSelectedAssignment(assignment);
+                                  setAssignmentSubTab('details');
+                                }}
+                                className="btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-6 rounded-lg hover:bg-[#2a2a2a] transition-colors text-sm border border-[#FFD600]/10"
+                              >
+                                Edit Details
+                              </button>
+                            </div>
+                          </div>
+                        </GlassCard>
+                      </motion.div>
                     ))}
                   </div>
-                </ChartCard>
-              </div>
+                </>
+              ) : (
+                <div className="space-y-6">
+                  {/* Assignment Detail View */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <button 
+                      onClick={() => setSelectedAssignment(null)}
+                      className="p-2 hover:bg-[#FFD600]/10 rounded-lg transition-colors text-[#FFD600]"
+                    >
+                      <Plus className="w-6 h-6 rotate-45" />
+                    </button>
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#e8e6e1]">{selectedAssignment.title}</h2>
+                      <p className="text-[#FFD600] text-sm">{selectedAssignment.courseTitle}</p>
+                    </div>
+                  </div>
 
-              <ChartCard title="Assignment Management">
-                <div className="grid md:grid-cols-4 gap-4">
-                  {[
-                    { action: 'Create Assignment', icon: FileText, color: '#FFD600' },
-                    { action: 'Grade Submissions', icon: CheckCircle, color: '#FFD600' },
-                    { action: 'Send Reminders', icon: MessageSquare, color: '#FFD600' },
-                    { action: 'View Analytics', icon: BarChart3, color: '#FFD600' }
-                  ].map((item, idx) => {
-                    const Icon = item.icon;
-                    return (
-                      <button key={idx} className="btn-3d p-6 bg-[#1a1a1a] text-[#e8e6e1] rounded-xl hover:bg-[#2a2a2a] transition-colors text-center">
-                        <Icon className="w-8 h-8 text-[#FFD600] mx-auto mb-3" />
-                        <span style={{ fontSize: '0.875rem' }}>{item.action}</span>
+                  <div className="flex gap-2 p-1 bg-[#1a1a1a] rounded-xl border border-[#FFD600]/10 w-fit mb-8">
+                    {(['submissions', 'details', 'analytics'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setAssignmentSubTab(tab)}
+                        className={`px-6 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
+                          assignmentSubTab === tab
+                            ? 'bg-[#FFD600] text-black shadow-lg'
+                            : 'text-[#a8a6a1] hover:text-[#e8e6e1]'
+                        }`}
+                      >
+                        {tab}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+
+                  <motion.div
+                    key={assignmentSubTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {assignmentSubTab === 'submissions' && (
+                      <div className="space-y-4">
+                        {(!selectedAssignment.submissions || selectedAssignment.submissions.length === 0) ? (
+                          <GlassCard>
+                            <div className="p-12 text-center">
+                              <CheckCircle className="w-12 h-12 text-[#FFD600]/30 mx-auto mb-4" />
+                              <p className="text-[#a8a6a1]">No submissions received yet.</p>
+                            </div>
+                          </GlassCard>
+                        ) : (
+                          selectedAssignment.submissions.map((submission: any, idx: number) => (
+                            <GlassCard key={idx}>
+                              <div className="p-6 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-full bg-[#FFD600]/20 flex items-center justify-center text-[#FFD600] font-bold">
+                                    {submission.student?.name?.[0] || 'S'}
+                                  </div>
+                                  <div>
+                                    <h4 className="text-[#e8e6e1] font-semibold">{submission.student?.name || 'Unknown Student'}</h4>
+                                    <p className="text-[#a8a6a1] text-xs">Submitted on {new Date(submission.submittedAt).toLocaleString()}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  {submission.grade !== undefined ? (
+                                    <div className="text-right">
+                                      <div className="text-[#FFD600] font-bold">{submission.grade}/{selectedAssignment.totalPoints}</div>
+                                      <div className="text-green-400 text-[10px] font-bold uppercase tracking-wider">Graded</div>
+                                    </div>
+                                  ) : (
+                                    <button className="btn-3d bg-[#FFD600] text-black font-bold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors text-xs">
+                                      Grade Now
+                                    </button>
+                                  )}
+                                  <button className="p-2 hover:bg-[#1a1a1a] rounded-lg transition-colors text-[#a8a6a1]">
+                                    <FileText className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </GlassCard>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {assignmentSubTab === 'details' && (
+                      <GlassCard>
+                        <div className="p-8 space-y-6">
+                          <div className="grid md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                              <h4 className="text-[#FFD600] font-bold text-sm uppercase tracking-widest">General Information</h4>
+                              <div className="space-y-1">
+                                <p className="text-[#a8a6a1] text-xs">Description</p>
+                                <p className="text-[#e8e6e1]">{selectedAssignment.description}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[#a8a6a1] text-xs">Instructions</p>
+                                <p className="text-[#e8e6e1]">{selectedAssignment.instructions || 'No specific instructions provided.'}</p>
+                              </div>
+                            </div>
+                            <div className="space-y-4">
+                              <h4 className="text-[#FFD600] font-bold text-sm uppercase tracking-widest">Settings & Deadline</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-[#1a1a1a] rounded-xl border border-[#FFD600]/10">
+                                  <p className="text-[#a8a6a1] text-xs mb-1">Due Date</p>
+                                  <p className="text-[#e8e6e1] font-bold">{new Date(selectedAssignment.dueDate).toLocaleDateString()}</p>
+                                </div>
+                                <div className="p-4 bg-[#1a1a1a] rounded-xl border border-[#FFD600]/10">
+                                  <p className="text-[#a8a6a1] text-xs mb-1">Total Points</p>
+                                  <p className="text-[#e8e6e1] font-bold">{selectedAssignment.totalPoints}</p>
+                                </div>
+                              </div>
+                              <button className="w-full btn-3d bg-[#1a1a1a] text-[#FFD600] font-bold py-3 rounded-xl hover:bg-[#2a2a2a] transition-all border border-[#FFD600]/20 flex items-center justify-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Edit Assignment
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </GlassCard>
+                    )}
+
+                    {assignmentSubTab === 'analytics' && (
+                      <div className="grid md:grid-cols-3 gap-6">
+                        <ChartCard title="Submission Rate">
+                          <div className="flex flex-col items-center justify-center h-full py-8">
+                            <div className="relative w-32 h-32 mb-4">
+                              <svg className="w-full h-full transform -rotate-90">
+                                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-[#1a1a1a]" />
+                                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" 
+                                  strokeDasharray={364.4}
+                                  strokeDashoffset={364.4 * (1 - (selectedAssignment.submissions?.length || 0) / (courses.find(c => c.title === selectedAssignment.courseTitle)?.students?.length || 1))}
+                                  className="text-[#FFD600]" 
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-[#e8e6e1]">
+                                {Math.round(((selectedAssignment.submissions?.length || 0) / (courses.find(c => c.title === selectedAssignment.courseTitle)?.students?.length || 1)) * 100)}%
+                              </div>
+                            </div>
+                            <p className="text-[#a8a6a1] text-sm text-center">
+                              {selectedAssignment.submissions?.length || 0} of {courses.find(c => c.title === selectedAssignment.courseTitle)?.students?.length || 0} students submitted
+                            </p>
+                          </div>
+                        </ChartCard>
+                        <div className="md:col-span-2">
+                          <ChartCard title="Grade Distribution">
+                            <div className="h-[200px] flex items-center justify-center">
+                              <p className="text-[#a8a6a1] italic">Insufficient data to show grade distribution</p>
+                            </div>
+                          </ChartCard>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
                 </div>
-              </ChartCard>
+              )}
             </motion.div>
           )}
 
@@ -935,66 +1206,121 @@ export function TeacherDashboard({ onLogout }: TeacherDashboardProps) {
                 <div className="lg:col-span-2 space-y-6">
                   <GlassCard>
                     <div className="p-6">
-                      <h3 className="text-[#e8e6e1] font-semibold mb-6">Profile Information</h3>
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-[#a8a6a1] text-sm mb-2">Full Name</label>
-                            <input
-                              type="text"
-                              defaultValue="Dr. Sarah Johnson"
-                              className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
-                            />
+                      {!isEditingProfile ? (
+                        <>
+                          <h3 className="text-[#e8e6e1] font-semibold mb-6">Profile Information</h3>
+                          <div className="grid md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                              <p className="text-[#a8a6a1] text-sm mb-1">Full Name</p>
+                              <p className="text-[#e8e6e1] font-medium">{profile?.name || 'Not set'}</p>
+                            </div>
+                            <div>
+                              <p className="text-[#a8a6a1] text-sm mb-1">Email</p>
+                              <p className="text-[#e8e6e1] font-medium">{profile?.email || 'Not set'}</p>
+                            </div>
+                            <div>
+                              <p className="text-[#a8a6a1] text-sm mb-1">Department</p>
+                              <p className="text-[#e8e6e1] font-medium">{profile?.academicInfo?.department || 'Not set'}</p>
+                            </div>
+                            <div>
+                              <p className="text-[#a8a6a1] text-sm mb-1">Subjects</p>
+                              <p className="text-[#e8e6e1] font-medium">{profile?.academicInfo?.subject?.join(', ') || 'Not set'}</p>
+                            </div>
+                            <div>
+                              <p className="text-[#a8a6a1] text-sm mb-1">Phone</p>
+                              <p className="text-[#e8e6e1] font-medium">{profile?.profile?.phone || 'Not set'}</p>
+                            </div>
+                            <div>
+                              <p className="text-[#a8a6a1] text-sm mb-1">Status</p>
+                              <p className="text-[#e8e6e1] font-medium capitalize">{profile?.status || 'active'}</p>
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-[#a8a6a1] text-sm mb-2">Email</label>
-                            <input
-                              type="email"
-                              defaultValue="sarah.johnson@university.edu"
-                              className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
-                            />
+                          <button 
+                            onClick={() => setIsEditingProfile(true)}
+                            className="btn-3d bg-[#FFD600] text-black font-semibold py-3 px-6 rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+                          >
+                            Edit Profile
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="text-[#e8e6e1] font-semibold mb-6">Edit Profile</h3>
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-[#a8a6a1] text-sm mb-2">Full Name</label>
+                                <input
+                                  type="text"
+                                  value={editedProfile?.name || ''}
+                                  onChange={(e) => setEditedProfile({...editedProfile, name: e.target.value})}
+                                  className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[#a8a6a1] text-sm mb-2">Email</label>
+                                <input
+                                  type="email"
+                                  value={editedProfile?.email || ''}
+                                  disabled
+                                  className="w-full bg-[#1a1a1a] text-[#a8a6a1] rounded-lg px-4 py-3 opacity-50 cursor-not-allowed"
+                                />
+                                <p className="text-[#a8a6a1] text-xs mt-1">Email cannot be changed</p>
+                              </div>
+                              <div>
+                                <label className="block text-[#a8a6a1] text-sm mb-2">Department</label>
+                                <input
+                                  type="text"
+                                  value={editedProfile?.academicInfo?.department || ''}
+                                  onChange={(e) => setEditedProfile({...editedProfile, academicInfo: {...editedProfile?.academicInfo, department: e.target.value}})}
+                                  className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-[#a8a6a1] text-sm mb-2">Phone</label>
+                                <input
+                                  type="tel"
+                                  value={editedProfile?.profile?.phone || ''}
+                                  onChange={(e) => setEditedProfile({...editedProfile, profile: {...editedProfile?.profile, phone: e.target.value}})}
+                                  className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[#a8a6a1] text-sm mb-2">Office Location</label>
+                                <input
+                                  type="text"
+                                  value={editedProfile?.profile?.address?.street || ''}
+                                  onChange={(e) => setEditedProfile({...editedProfile, profile: {...editedProfile?.profile, address: {...editedProfile?.profile?.address, street: e.target.value}}})}
+                                  className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[#a8a6a1] text-sm mb-2">Bio</label>
+                                <textarea
+                                  value={editedProfile?.profile?.bio || ''}
+                                  onChange={(e) => setEditedProfile({...editedProfile, profile: {...editedProfile?.profile, bio: e.target.value}})}
+                                  className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600] min-h-20"
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-[#a8a6a1] text-sm mb-2">Department</label>
-                            <input
-                              type="text"
-                              defaultValue="Mathematics & Computer Science"
-                              className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
-                            />
+                          <div className="mt-6 flex gap-3">
+                            <button 
+                              onClick={handleSaveProfile}
+                              className="btn-3d flex-1 bg-[#FFD600] text-black font-semibold py-3 px-6 rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+                            >
+                              Save Changes
+                            </button>
+                            <button 
+                              onClick={() => setIsEditingProfile(false)}
+                              className="btn-3d flex-1 bg-[#1a1a1a] text-[#e8e6e1] font-semibold py-3 px-6 rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                            >
+                              Cancel
+                            </button>
                           </div>
-                        </div>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-[#a8a6a1] text-sm mb-2">Employee ID</label>
-                            <input
-                              type="text"
-                              defaultValue="PROF-2023-045"
-                              className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[#a8a6a1] text-sm mb-2">Phone</label>
-                            <input
-                              type="tel"
-                              defaultValue="+1 (555) 123-4567"
-                              className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[#a8a6a1] text-sm mb-2">Office Location</label>
-                            <input
-                              type="text"
-                              defaultValue="Science Building, Room 204"
-                              className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-6">
-                        <button className="btn-3d bg-[#FFD600] text-black font-semibold py-3 px-6 rounded-lg hover:bg-[#FFD600]/90 transition-colors">
-                          Save Changes
-                        </button>
-                      </div>
+                        </>
+                      )}
                     </div>
                   </GlassCard>
 
@@ -1083,6 +1409,238 @@ export function TeacherDashboard({ onLogout }: TeacherDashboardProps) {
           )}
 
         </AnimatePresence>
+
+        {/* Create Course Modal */}
+        <Dialog open={isCourseModalOpen} onOpenChange={setIsCourseModalOpen}>
+          <DialogContent className="bg-[#0a0a0a] border-[#FFD600]/20 text-[#e8e6e1] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-[#FFD600]">Create New Class</DialogTitle>
+              <DialogDescription className="text-[#a8a6a1]">
+                Set up a new learning environment for your students.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateCourse} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-[#a8a6a1]">Class Title</Label>
+                <Input 
+                  id="title"
+                  placeholder="e.g. Advanced Physics 101"
+                  value={newCourse.title}
+                  onChange={(e) => setNewCourse({...newCourse, title: e.target.value})}
+                  className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject" className="text-[#a8a6a1]">Subject</Label>
+                <Input 
+                  id="subject"
+                  placeholder="e.g. Science"
+                  value={newCourse.subject}
+                  onChange={(e) => setNewCourse({...newCourse, subject: e.target.value})}
+                  className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="classCode" className="text-[#a8a6a1]">Class Code (Optional)</Label>
+                <Input 
+                  id="classCode"
+                  placeholder="e.g. PHYS101 (leave empty for auto-generated)"
+                  value={newCourse.classCode}
+                  onChange={(e) => setNewCourse({...newCourse, classCode: e.target.value.toUpperCase()})}
+                  className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50"
+                  maxLength="6"
+                />
+                <p className="text-[#a8a6a1] text-xs">Leave blank for auto-generated code. Max 6 characters.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="grade" className="text-[#a8a6a1]">Grade Level</Label>
+                  <Input 
+                    id="grade"
+                    placeholder="e.g. 10th"
+                    value={newCourse.grade}
+                    onChange={(e) => setNewCourse({...newCourse, grade: e.target.value})}
+                    className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startTime" className="text-[#a8a6a1]">Start Time</Label>
+                  <Input 
+                    id="startTime"
+                    type="time"
+                    value={newCourse.schedule.startTime}
+                    onChange={(e) => setNewCourse({...newCourse, schedule: {...newCourse.schedule, startTime: e.target.value}})}
+                    className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-[#a8a6a1]">Description</Label>
+                <Textarea 
+                  id="description"
+                  placeholder="Describe your course goals..."
+                  value={newCourse.description}
+                  onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
+                  className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50 min-h-[100px]"
+                />
+              </div>
+              <DialogFooter className="pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsCourseModalOpen(false)}
+                  className="px-4 py-2 text-[#a8a6a1] hover:text-[#e8e6e1] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="btn-3d px-6 py-2 bg-[#FFD600] text-black font-bold rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+                >
+                  Create Class
+                </button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Class Code Display Modal */}
+        <Dialog open={!!createdClassCode} onOpenChange={(open) => !open && setCreatedClassCode(null)}>
+          <DialogContent className="bg-[#0a0a0a] border-[#FFD600]/20 text-[#e8e6e1] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-[#FFD600]">✨ Class Created!</DialogTitle>
+              <DialogDescription className="text-[#a8a6a1]">
+                Share this code with your students to join {createdClassName}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-6 space-y-4">
+              <div className="bg-[#1a1a1a] border-2 border-[#FFD600] rounded-lg p-6 text-center">
+                <p className="text-[#a8a6a1] text-sm mb-2">Class Code</p>
+                <p className="text-[#FFD600] font-bold text-4xl tracking-widest mb-4">{createdClassCode}</p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdClassCode || '');
+                    alert('Code copied to clipboard!');
+                  }}
+                  className="w-full bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+                >
+                  📋 Copy Code
+                </button>
+              </div>
+              <div className="bg-[#1a1a1a] rounded-lg p-4">
+                <p className="text-[#a8a6a1] text-sm mb-2">📌 How to Share:</p>
+                <ul className="text-[#e8e6e1] text-sm space-y-1">
+                  <li>✓ Share the code <strong>{createdClassCode}</strong> with students</li>
+                  <li>✓ Students enter it in the "Join a New Class" section</li>
+                  <li>✓ They'll be automatically added to your class</li>
+                </ul>
+              </div>
+            </div>
+            <DialogFooter>
+              <button
+                onClick={() => setCreatedClassCode(null)}
+                className="w-full btn-3d bg-[#FFD600] text-black font-bold py-2 px-6 rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+              >
+                Got it! Close
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Assignment Modal */}
+        <Dialog open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
+          <DialogContent className="bg-[#0a0a0a] border-[#FFD600]/20 text-[#e8e6e1] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-[#FFD600]">Create New Assignment</DialogTitle>
+              <DialogDescription className="text-[#a8a6a1]">
+                Assign a new task to your students.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateAssignment} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="courseId" className="text-[#a8a6a1]">Select Class</Label>
+                <Select 
+                  value={newAssignment.courseId} 
+                  onValueChange={(value) => setNewAssignment({...newAssignment, courseId: value})}
+                >
+                  <SelectTrigger className="bg-[#1a1a1a] border-[#FFD600]/10 text-[#e8e6e1]">
+                    <SelectValue placeholder="Choose a class" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-[#FFD600]/20 text-[#e8e6e1]">
+                    {courses.map(course => (
+                      <SelectItem key={course._id} value={course._id} className="focus:bg-[#FFD600]/10 focus:text-[#FFD600]">
+                        {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="a-title" className="text-[#a8a6a1]">Assignment Title</Label>
+                <Input 
+                  id="a-title"
+                  placeholder="e.g. Mid-term Research Paper"
+                  value={newAssignment.title}
+                  onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})}
+                  className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate" className="text-[#a8a6a1]">Due Date</Label>
+                  <Input 
+                    id="dueDate"
+                    type="date"
+                    value={newAssignment.dueDate}
+                    onChange={(e) => setNewAssignment({...newAssignment, dueDate: e.target.value})}
+                    className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="totalPoints" className="text-[#a8a6a1]">Points</Label>
+                  <Input 
+                    id="totalPoints"
+                    type="number"
+                    value={newAssignment.totalPoints}
+                    onChange={(e) => setNewAssignment({...newAssignment, totalPoints: parseInt(e.target.value)})}
+                    className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="a-description" className="text-[#a8a6a1]">Instructions</Label>
+                <Textarea 
+                  id="a-description"
+                  placeholder="Provide details about the assignment..."
+                  value={newAssignment.description}
+                  onChange={(e) => setNewAssignment({...newAssignment, description: e.target.value})}
+                  className="bg-[#1a1a1a] border-[#FFD600]/10 focus:border-[#FFD600]/50 min-h-[100px]"
+                />
+              </div>
+              <DialogFooter className="pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsAssignmentModalOpen(false)}
+                  className="px-4 py-2 text-[#a8a6a1] hover:text-[#e8e6e1] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="btn-3d px-6 py-2 bg-[#FFD600] text-black font-bold rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+                >
+                  Create Assignment
+                </button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

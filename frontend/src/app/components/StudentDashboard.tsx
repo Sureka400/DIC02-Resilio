@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
@@ -15,25 +15,87 @@ import {
   Heart,
   Brain,
   Trophy,
-  Star
+  Star,
+  Plus
 } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { TabNavigation } from './TabNavigation';
 import { ChartCard } from './ChartCard';
 import { ChatComponent } from './ChatComponent';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { studentAPI, courseAPI } from '../api';
 
 interface StudentDashboardProps {
   onLogout: () => void;
+  onEnterClassroom: (course: any) => void;
+  onGoToClasses?: () => void;
 }
 
-export function StudentDashboard({ onLogout }: StudentDashboardProps) {
+export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: StudentDashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [courses, setCourses] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [classCode, setClassCode] = useState('');
+  const [joinStatus, setJoinStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedProfile, setEditedProfile] = useState<any>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const enrolledCourses = await studentAPI.getCourses();
+      setCourses(enrolledCourses);
+      
+      const userProfile = await studentAPI.getProfile();
+      setProfile(userProfile);
+      setEditedProfile(userProfile);
+      
+      const allAssignments = await studentAPI.getAssignments();
+      setAssignments(allAssignments);
+    } catch (error) {
+      console.error('Error fetching student data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const updated = await studentAPI.updateProfile({
+        name: editedProfile.name,
+        profile: editedProfile.profile
+      });
+      setProfile(updated.user);
+      setIsEditingProfile(false);
+      alert('✅ Profile updated successfully!');
+    } catch (error: any) {
+      alert(`❌ Error updating profile: ${error.message}`);
+    }
+  };
+
+  const handleJoinClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!classCode) return;
+    
+    try {
+      await courseAPI.join(classCode);
+      setJoinStatus({ type: 'success', message: 'Successfully joined the class!' });
+      setClassCode('');
+      fetchData(); // Refresh data
+    } catch (error: any) {
+      setJoinStatus({ type: 'error', message: error.message || 'Failed to join class' });
+    }
+  };
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'classroom', label: 'Classroom', icon: BookOpen },
-    { id: 'assignments', label: 'Assignments', icon: FileText },
     { id: 'ai-assistant', label: 'AI Assistant', icon: Bot },
     { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'progress', label: 'Progress & Well-Being', icon: TrendingUp },
@@ -118,10 +180,10 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
               {/* Quick Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 {[
-                  { label: 'Courses Enrolled', value: '8', icon: BookOpen },
-                  { label: 'Hours This Week', value: '28', icon: Clock },
-                  { label: 'Achievements', value: '12', icon: Award },
-                  { label: 'Average Score', value: '92%', icon: TrendingUp },
+                  { label: 'Courses Enrolled', value: courses.length.toString(), icon: BookOpen },
+                  { label: 'Pending Assignments', value: assignments.filter(a => !a.submission).length.toString(), icon: Clock },
+                  { label: 'Completed', value: assignments.filter(a => a.submission).length.toString(), icon: Award },
+                  { label: 'Join New Class', value: 'Join', icon: Plus, isAction: true },
                 ].map((stat, index) => {
                   const Icon = stat.icon;
                   return (
@@ -136,11 +198,20 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
                           <div className="p-3 rounded-xl bg-[#FFD600]/10">
                             <Icon className="w-6 h-6 text-[#FFD600]" />
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <p className="text-[#a8a6a1] mb-1" style={{ fontSize: '0.875rem' }}>{stat.label}</p>
-                            <p style={{ fontSize: '1.75rem', fontWeight: 700, color: '#FFD600' }}>
-                              {stat.value}
-                            </p>
+                            {stat.isAction ? (
+                              <button 
+                                onClick={() => setActiveTab('classroom')}
+                                className="text-[#FFD600] font-bold hover:underline"
+                              >
+                                Join Now
+                              </button>
+                            ) : (
+                              <p style={{ fontSize: '1.75rem', fontWeight: 700, color: '#FFD600' }}>
+                                {stat.value}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </GlassCard>
@@ -325,219 +396,20 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {[
-                  {
-                    title: 'Advanced Mathematics',
-                    teacher: 'Dr. Sarah Johnson',
-                    schedule: 'Mon, Wed 10:00 AM',
-                    progress: 85,
-                    students: 28,
-                    nextClass: 'Today, 10:00 AM'
-                  },
-                  {
-                    title: 'Physics Fundamentals',
-                    teacher: 'Prof. Michael Chen',
-                    schedule: 'Tue, Thu 2:00 PM',
-                    progress: 72,
-                    students: 32,
-                    nextClass: 'Tomorrow, 2:00 PM'
-                  },
-                  {
-                    title: 'Computer Science',
-                    teacher: 'Ms. Emily Davis',
-                    schedule: 'Mon, Wed, Fri 1:00 PM',
-                    progress: 95,
-                    students: 25,
-                    nextClass: 'Friday, 1:00 PM'
-                  },
-                  {
-                    title: 'English Literature',
-                    teacher: 'Mr. James Wilson',
-                    schedule: 'Tue, Thu 9:00 AM',
-                    progress: 68,
-                    students: 30,
-                    nextClass: 'Tuesday, 9:00 AM'
-                  },
-                  {
-                    title: 'Chemistry Lab',
-                    teacher: 'Dr. Lisa Brown',
-                    schedule: 'Wed, Fri 3:00 PM',
-                    progress: 78,
-                    students: 20,
-                    nextClass: 'Wednesday, 3:00 PM'
-                  },
-                  {
-                    title: 'History & Society',
-                    teacher: 'Mr. Robert Taylor',
-                    schedule: 'Mon, Thu 11:00 AM',
-                    progress: 82,
-                    students: 35,
-                    nextClass: 'Monday, 11:00 AM'
-                  }
-                ].map((course, index) => (
-                  <motion.div
-                    key={course.title}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
+              <GlassCard>
+                <div className="p-12 text-center">
+                  <BookOpen className="w-16 h-16 text-[#FFD600]/30 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold text-[#e8e6e1] mb-3">Manage Your Classes</h3>
+                  <p className="text-[#a8a6a1] mb-8">Join new classes, view your enrolled courses, and enter classrooms from the Classes page.</p>
+                  <button 
+                    onClick={onGoToClasses}
+                    className="btn-3d bg-[#FFD600] text-black font-semibold py-3 px-8 rounded-lg hover:bg-[#FFD600]/90 transition-colors flex items-center gap-2 mx-auto"
                   >
-                    <GlassCard>
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h3 className="text-[#e8e6e1] font-semibold mb-1">{course.title}</h3>
-                            <p className="text-[#a8a6a1] text-sm">{course.teacher}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-[#FFD600] font-bold">{course.progress}%</div>
-                            <div className="text-[#a8a6a1] text-xs">Progress</div>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2 mb-4">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Schedule:</span>
-                            <span className="text-[#e8e6e1]">{course.schedule}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Students:</span>
-                            <span className="text-[#e8e6e1]">{course.students}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Next Class:</span>
-                            <span className="text-[#FFD600]">{course.nextClass}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="w-full bg-[#1a1a1a] rounded-full h-2 mb-4">
-                          <div 
-                            className="bg-[#FFD600] h-2 rounded-full transition-all duration-1000"
-                            style={{ width: `${course.progress}%` }}
-                          />
-                        </div>
-                        
-                        <button className="w-full btn-3d bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors">
-                          Join Class
-                        </button>
-                      </div>
-                    </GlassCard>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'assignments' && (
-            <motion.div
-              key="assignments"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="space-y-6">
-                {[
-                  {
-                    title: 'Calculus Problem Set #5',
-                    subject: 'Mathematics',
-                    dueDate: 'Dec 28, 2025',
-                    status: 'pending',
-                    priority: 'high',
-                    grade: null,
-                    description: 'Complete problems 1-15 from chapter 7'
-                  },
-                  {
-                    title: 'Physics Lab Report: Motion',
-                    subject: 'Physics',
-                    dueDate: 'Dec 30, 2025',
-                    status: 'in-progress',
-                    priority: 'medium',
-                    grade: null,
-                    description: 'Analyze projectile motion data and write conclusions'
-                  },
-                  {
-                    title: 'Algorithm Implementation',
-                    subject: 'Computer Science',
-                    dueDate: 'Dec 26, 2025',
-                    status: 'submitted',
-                    priority: 'high',
-                    grade: '95/100',
-                    description: 'Implement sorting algorithms in Python'
-                  },
-                  {
-                    title: 'Shakespeare Essay',
-                    subject: 'English',
-                    dueDate: 'Jan 2, 2026',
-                    status: 'pending',
-                    priority: 'low',
-                    grade: null,
-                    description: 'Compare themes in Romeo and Juliet'
-                  },
-                  {
-                    title: 'Chemical Reactions Lab',
-                    subject: 'Chemistry',
-                    dueDate: 'Dec 29, 2025',
-                    status: 'overdue',
-                    priority: 'high',
-                    grade: null,
-                    description: 'Conduct experiments and record observations'
-                  }
-                ].map((assignment, index) => (
-                  <motion.div
-                    key={assignment.title}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
-                  >
-                    <GlassCard>
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="text-[#e8e6e1] font-semibold">{assignment.title}</h3>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                assignment.status === 'submitted' ? 'bg-green-500/20 text-green-400' :
-                                assignment.status === 'in-progress' ? 'bg-[#FFD600]/20 text-[#FFD600]' :
-                                assignment.status === 'overdue' ? 'bg-red-500/20 text-red-400' :
-                                'bg-gray-500/20 text-gray-400'
-                              }`}>
-                                {assignment.status === 'submitted' ? 'Submitted' :
-                                 assignment.status === 'in-progress' ? 'In Progress' :
-                                 assignment.status === 'overdue' ? 'Overdue' : 'Pending'}
-                              </span>
-                              {assignment.priority === 'high' && (
-                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400">
-                                  High Priority
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[#a8a6a1] text-sm mb-2">{assignment.subject}</p>
-                            <p className="text-[#a8a6a1] text-sm">{assignment.description}</p>
-                          </div>
-                          <div className="text-right ml-4">
-                            <div className="text-[#FFD600] font-semibold mb-1">Due: {assignment.dueDate}</div>
-                            {assignment.grade && (
-                              <div className="text-green-400 font-semibold">Grade: {assignment.grade}</div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex gap-3">
-                          <button className="btn-3d bg-[#FFD600] text-black font-semibold py-2 px-6 rounded-lg hover:bg-[#FFD600]/90 transition-colors">
-                            {assignment.status === 'submitted' ? 'View Submission' : 'Start Assignment'}
-                          </button>
-                          {assignment.status !== 'submitted' && (
-                            <button className="btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-6 rounded-lg hover:bg-[#2a2a2a] transition-colors">
-                              Upload Files
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </GlassCard>
-                  </motion.div>
-                ))}
-              </div>
+                    <Plus className="w-5 h-5" />
+                    Go to Classes
+                  </button>
+                </div>
+              </GlassCard>
             </motion.div>
           )}
 
@@ -613,46 +485,13 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
               transition={{ duration: 0.4 }}
             >
               <div className="grid md:grid-cols-2 gap-6 mb-8">
-                {[
-                  {
-                    title: 'Smart Campus Navigation App',
-                    description: 'Develop an app to help students navigate campus efficiently',
-                    team: ['Alice Johnson', 'Bob Smith', 'Charlie Brown'],
-                    deadline: 'Feb 15, 2026',
-                    status: 'in-progress',
-                    progress: 65,
-                    technologies: ['React Native', 'Node.js', 'MongoDB']
-                  },
-                  {
-                    title: 'AI Study Planner',
-                    description: 'Create an AI-powered study schedule generator',
-                    team: ['Diana Prince', 'Eve Wilson'],
-                    deadline: 'Jan 30, 2026',
-                    status: 'planning',
-                    progress: 20,
-                    technologies: ['Python', 'TensorFlow', 'React']
-                  },
-                  {
-                    title: 'Virtual Chemistry Lab',
-                    description: 'Build a virtual reality chemistry laboratory',
-                    team: ['Frank Miller', 'Grace Lee', 'Henry Davis', 'Ivy Chen'],
-                    deadline: 'Mar 10, 2026',
-                    status: 'in-progress',
-                    progress: 40,
-                    technologies: ['Unity', 'C#', 'VR SDK']
-                  },
-                  {
-                    title: 'Campus Sustainability Dashboard',
-                    description: 'Monitor and visualize campus environmental impact',
-                    team: ['Jack Taylor', 'Kate Wilson'],
-                    deadline: 'Feb 28, 2026',
-                    status: 'completed',
-                    progress: 100,
-                    technologies: ['React', 'D3.js', 'Node.js']
-                  }
-                ].map((project, index) => (
+                {assignments.filter(a => a.type === 'project').length === 0 ? (
+                  <div className="col-span-2 text-center py-12">
+                    <p className="text-[#a8a6a1]">No projects found.</p>
+                  </div>
+                ) : assignments.filter(a => a.type === 'project').map((project, index) => (
                   <motion.div
-                    key={project.title}
+                    key={project._id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
@@ -664,51 +503,41 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
                             <h3 className="text-[#e8e6e1] font-semibold mb-2">{project.title}</h3>
                             <p className="text-[#a8a6a1] text-sm mb-3">{project.description}</p>
                             <div className="flex flex-wrap gap-1 mb-3">
-                              {project.technologies.map((tech) => (
-                                <span key={tech} className="px-2 py-1 bg-[#FFD600]/10 text-[#FFD600] text-xs rounded-full">
-                                  {tech}
-                                </span>
-                              ))}
+                              <span className="px-2 py-1 bg-[#FFD600]/10 text-[#FFD600] text-xs rounded-full">
+                                {project.course?.title || project.subject}
+                              </span>
                             </div>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            project.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                            project.status === 'in-progress' ? 'bg-[#FFD600]/20 text-[#FFD600]' :
-                            'bg-gray-500/20 text-gray-400'
+                            project.submission?.grade ? 'bg-green-500/20 text-green-400' :
+                            project.submission ? 'bg-blue-500/20 text-blue-400' :
+                            'bg-[#FFD600]/20 text-[#FFD600]'
                           }`}>
-                            {project.status === 'completed' ? 'Completed' :
-                             project.status === 'in-progress' ? 'In Progress' : 'Planning'}
+                            {project.submission?.grade ? 'Graded' :
+                             project.submission ? 'Submitted' : 'Pending'}
                           </span>
                         </div>
                         
                         <div className="space-y-3 mb-4">
                           <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Team:</span>
-                            <span className="text-[#e8e6e1]">{project.team.length} members</span>
+                            <span className="text-[#a8a6a1]">Due Date:</span>
+                            <span className="text-[#FFD600]">{new Date(project.dueDate).toLocaleDateString()}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Deadline:</span>
-                            <span className="text-[#FFD600]">{project.deadline}</span>
+                            <span className="text-[#a8a6a1]">Points:</span>
+                            <span className="text-[#e8e6e1]">{project.totalPoints}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Progress:</span>
-                            <span className="text-[#e8e6e1]">{project.progress}%</span>
-                          </div>
-                        </div>
-                        
-                        <div className="w-full bg-[#1a1a1a] rounded-full h-2 mb-4">
-                          <div 
-                            className="bg-[#FFD600] h-2 rounded-full transition-all duration-1000"
-                            style={{ width: `${project.progress}%` }}
-                          />
+                          {project.submission?.grade && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-[#a8a6a1]">Grade:</span>
+                              <span className="text-green-400 font-bold">{project.submission.grade}/{project.totalPoints}</span>
+                            </div>
+                          )}
                         </div>
                         
                         <div className="flex gap-2">
                           <button className="flex-1 btn-3d bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors">
-                            View Project
-                          </button>
-                          <button className="btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-4 rounded-lg hover:bg-[#2a2a2a] transition-colors">
-                            <User className="w-4 h-4" />
+                            {project.submission ? 'View Submission' : 'Start Project'}
                           </button>
                         </div>
                       </div>
@@ -852,58 +681,120 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
                 <div className="lg:col-span-2 space-y-6">
                   <GlassCard>
                     <div className="p-6">
-                      <div className="flex items-start gap-6 mb-6">
-                        <div className="w-20 h-20 rounded-full bg-[#FFD600] flex items-center justify-center">
-                          <User className="w-10 h-10 text-black" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-[#e8e6e1] text-xl font-semibold mb-1">Alex Johnson</h3>
-                          <p className="text-[#a8a6a1] mb-2">Computer Science Major</p>
-                          <p className="text-[#a8a6a1] text-sm">Student ID: CS2024001</p>
-                          <p className="text-[#a8a6a1] text-sm">Year: Junior (3rd Year)</p>
-                        </div>
-                        <button className="btn-3d bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors">
-                          Edit Profile
-                        </button>
-                      </div>
-                      
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                          <h4 className="text-[#e8e6e1] font-semibold mb-3">Contact Information</h4>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-[#a8a6a1]">Email:</span>
-                              <span className="text-[#e8e6e1]">alex.johnson@university.edu</span>
+                      {!isEditingProfile ? (
+                        <>
+                          <div className="flex items-start gap-6 mb-6">
+                            <div className="w-20 h-20 rounded-full bg-[#FFD600] flex items-center justify-center">
+                              <User className="w-10 h-10 text-black" />
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#a8a6a1]">Phone:</span>
-                              <span className="text-[#e8e6e1]">+1 (555) 123-4567</span>
+                            <div className="flex-1">
+                              <h3 className="text-[#e8e6e1] text-xl font-semibold mb-1">{profile?.name || 'Student'}</h3>
+                              <p className="text-[#a8a6a1] mb-2">{profile?.academicInfo?.subject?.[0] || 'Student'}</p>
+                              <p className="text-[#a8a6a1] text-sm">Grade: {profile?.academicInfo?.grade || 'N/A'}</p>
+                              <p className="text-[#a8a6a1] text-sm">Email: {profile?.email || 'N/A'}</p>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#a8a6a1]">Address:</span>
-                              <span className="text-[#e8e6e1]">Campus Dorm #204</span>
+                            <button 
+                              onClick={() => setIsEditingProfile(true)}
+                              className="btn-3d bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+                            >
+                              Edit Profile
+                            </button>
+                          </div>
+                          
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                              <h4 className="text-[#e8e6e1] font-semibold mb-3">Contact Information</h4>
+                              <div className="space-y-2">
+                                <div className="flex justify-between">
+                                  <span className="text-[#a8a6a1]">Email:</span>
+                                  <span className="text-[#e8e6e1]">{profile?.email || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-[#a8a6a1]">Phone:</span>
+                                  <span className="text-[#e8e6e1]">{profile?.profile?.phone || 'Not set'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-[#a8a6a1]">Address:</span>
+                                  <span className="text-[#e8e6e1]">{profile?.profile?.address?.city || 'Not set'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <h4 className="text-[#e8e6e1] font-semibold mb-3">Academic Information</h4>
+                              <div className="space-y-2">
+                                <div className="flex justify-between">
+                                  <span className="text-[#a8a6a1]">Grade:</span>
+                                  <span className="text-[#FFD600] font-semibold">{profile?.academicInfo?.grade || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-[#a8a6a1]">Department:</span>
+                                  <span className="text-[#e8e6e1]">{profile?.academicInfo?.department || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-[#a8a6a1]">Status:</span>
+                                  <span className="text-[#e8e6e1] capitalize">{profile?.status || 'active'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-4">
+                          <h3 className="text-[#e8e6e1] text-xl font-semibold">Edit Profile</h3>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-[#a8a6a1] text-sm mb-2">Full Name</label>
+                              <input
+                                type="text"
+                                value={editedProfile?.name || ''}
+                                onChange={(e) => setEditedProfile({...editedProfile, name: e.target.value})}
+                                className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[#a8a6a1] text-sm mb-2">Phone</label>
+                              <input
+                                type="tel"
+                                value={editedProfile?.profile?.phone || ''}
+                                onChange={(e) => setEditedProfile({...editedProfile, profile: {...editedProfile?.profile, phone: e.target.value}})}
+                                className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[#a8a6a1] text-sm mb-2">City</label>
+                              <input
+                                type="text"
+                                value={editedProfile?.profile?.address?.city || ''}
+                                onChange={(e) => setEditedProfile({...editedProfile, profile: {...editedProfile?.profile, address: {...editedProfile?.profile?.address, city: e.target.value}}})}
+                                className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[#a8a6a1] text-sm mb-2">Bio</label>
+                              <textarea
+                                value={editedProfile?.profile?.bio || ''}
+                                onChange={(e) => setEditedProfile({...editedProfile, profile: {...editedProfile?.profile, bio: e.target.value}})}
+                                className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600] min-h-20"
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={handleSaveProfile}
+                                className="btn-3d flex-1 bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+                              >
+                                Save Changes
+                              </button>
+                              <button
+                                onClick={() => setIsEditingProfile(false)}
+                                className="btn-3d flex-1 bg-[#1a1a1a] text-[#e8e6e1] font-semibold py-2 px-4 rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                              >
+                                Cancel
+                              </button>
                             </div>
                           </div>
                         </div>
-                        
-                        <div>
-                          <h4 className="text-[#e8e6e1] font-semibold mb-3">Academic Information</h4>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-[#a8a6a1]">GPA:</span>
-                              <span className="text-[#FFD600] font-semibold">3.8/4.0</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#a8a6a1]">Credits:</span>
-                              <span className="text-[#e8e6e1]">87/120</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#a8a6a1]">Major:</span>
-                              <span className="text-[#e8e6e1]">Computer Science</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </GlassCard>
                   

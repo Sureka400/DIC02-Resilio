@@ -29,6 +29,7 @@ app.use('/api/teachers', require('./routes/teachers'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/assignments', require('./routes/assignments'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/ai-insights', require('./routes/aiInsights'));
 
 // Health check
 app.get('/api/health', (req, res) => {

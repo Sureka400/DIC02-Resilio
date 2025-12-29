@@ -19,6 +19,7 @@ import { GlassCard } from './GlassCard';
 import { TabNavigation } from './TabNavigation';
 import { ChartCard } from './ChartCard';
 import { ChatComponent } from './ChatComponent';
+import { AiInsights } from './AiInsights';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface TeacherDashboardProps {

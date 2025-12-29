@@ -15,12 +15,14 @@ import {
   Heart,
   Brain,
   Trophy,
-  Star
+  Star,
+  BarChart3
 } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { TabNavigation } from './TabNavigation';
 import { ChartCard } from './ChartCard';
 import { ChatComponent } from './ChatComponent';
+import { AiInsights } from './AiInsights';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface StudentDashboardProps {
@@ -35,6 +37,7 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
     { id: 'classroom', label: 'Classroom', icon: BookOpen },
     { id: 'assignments', label: 'Assignments', icon: FileText },
     { id: 'ai-assistant', label: 'AI Assistant', icon: Bot },
+    { id: 'insights', label: 'AI Insights', icon: BarChart3 },
     { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'progress', label: 'Progress & Well-Being', icon: TrendingUp },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
@@ -601,6 +604,25 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
                   </GlassCard>
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'insights' && (
+            <motion.div
+              key="insights"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <AiInsights 
+                role="student" 
+                data={{ 
+                  grades: assignmentProgressData, 
+                  skills: skillsData,
+                  studyConsistency: studyConsistencyData 
+                }} 
+              />
             </motion.div>
           )}
 

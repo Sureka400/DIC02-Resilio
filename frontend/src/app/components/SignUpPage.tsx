@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { BookOpen, Eye, EyeOff, ArrowLeft, Mail, Lock, User } from 'lucide-react';
+import { User, Mail, Lock, ArrowLeft, Eye, EyeOff, GraduationCap, BookOpen, Shield } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { authAPI } from '../api';
 
-interface TeacherLoginProps {
-  onLogin: () => void;
+interface SignUpPageProps {
+  onSignUp: (role: 'student' | 'teacher' | 'admin') => void;
   onBack: () => void;
-  onSignUp: () => void;
 }
 
-export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
+export function SignUpPage({ onSignUp, onBack }: SignUpPageProps) {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,10 +24,10 @@ export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
     setError(null);
 
     try {
-      await authAPI.login(email, password);
-      onLogin();
+      await authAPI.register(name, email, password, role);
+      onSignUp(role);
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+      setError(err.message || 'Registration failed');
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +38,6 @@ export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
       <div className="gradient-overlay" />
 
       <div className="relative z-10 max-w-md mx-auto w-full">
-        {/* Back Button */}
         <motion.button
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -45,7 +45,7 @@ export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
           className="flex items-center gap-2 text-[#a8a6a1] hover:text-[#FFD600] transition-colors mb-8"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Role Selection
+          Back to Login
         </motion.button>
 
         <motion.div
@@ -55,13 +55,9 @@ export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
         >
           <GlassCard>
             <div className="p-8">
-              {/* Header */}
               <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-full bg-[#FFD600]/10 flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-8 h-8 text-[#FFD600]" />
-                </div>
-                <h2 className="text-2xl font-bold text-[#e8e6e1] mb-2">Teacher Login</h2>
-                <p className="text-[#a8a6a1]">Access your teaching dashboard</p>
+                <h2 className="text-2xl font-bold text-[#e8e6e1] mb-2">Create Account</h2>
+                <p className="text-[#a8a6a1]">Join the Resolio community</p>
               </div>
 
               {error && (
@@ -70,8 +66,22 @@ export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
                 </div>
               )}
 
-              {/* Login Form */}
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[#a8a6a1] text-sm mb-2">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#a8a6a1]" />
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                      className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-10 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600] border border-[#FFD600]/20"
+                      required
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-[#a8a6a1] text-sm mb-2">Email Address</label>
                   <div className="relative">
@@ -80,7 +90,7 @@ export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="teacher@university.edu"
+                      placeholder="john@example.com"
                       className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-10 py-3 focus:outline-none focus:ring-2 focus:ring-[#FFD600] border border-[#FFD600]/20"
                       required
                     />
@@ -95,64 +105,54 @@ export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
+                      placeholder="Min. 6 characters"
                       className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-10 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-[#FFD600] border border-[#FFD600]/20"
                       required
+                      minLength={6}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#a8a6a1] hover:text-[#FFD600] transition-colors"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-4 h-4" />}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <label className="flex items-center gap-2 text-[#a8a6a1]">
-                    <input type="checkbox" className="rounded border-[#FFD600]/20 bg-[#1a1a1a]" />
-                    Remember me
-                  </label>
-                  <a href="#" className="text-[#FFD600] hover:text-[#FFB800] transition-colors">
-                    Forgot password?
-                  </a>
+                <div>
+                  <label className="block text-[#a8a6a1] text-sm mb-2">Role</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'student', icon: GraduationCap, label: 'Student' },
+                      { id: 'teacher', icon: BookOpen, label: 'Teacher' },
+                      { id: 'admin', icon: Shield, label: 'Admin' }
+                    ].map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setRole(r.id as any)}
+                        className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${
+                          role === r.id
+                            ? 'bg-[#FFD600]/10 border-[#FFD600] text-[#FFD600]'
+                            : 'bg-[#1a1a1a] border-[#FFD600]/10 text-[#a8a6a1] hover:border-[#FFD600]/30'
+                        }`}
+                      >
+                        <r.icon className="w-5 h-5 mb-1" />
+                        <span className="text-xs">{r.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full btn-3d bg-[#FFD600] text-black font-semibold py-3 px-6 rounded-lg hover:bg-[#FFB800] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full btn-3d bg-[#FFD600] text-black font-semibold py-3 px-6 rounded-lg hover:bg-[#FFB800] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                 >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                      Signing in...
-                    </div>
-                  ) : (
-                    'Sign In'
-                  )}
+                  {isLoading ? 'Creating Account...' : 'Sign Up'}
                 </button>
               </form>
-
-              <div className="mt-6 text-center">
-                <p className="text-[#a8a6a1] text-sm">
-                  Don't have an account?{' '}
-                  <button
-                    onClick={onSignUp}
-                    className="text-[#FFD600] hover:text-[#FFB800] font-semibold transition-colors"
-                  >
-                    Sign Up
-                  </button>
-                </p>
-              </div>
-
-              {/* Demo Credentials */}
-              <div className="mt-6 p-4 bg-[#1a1a1a] rounded-lg">
-                <p className="text-[#a8a6a1] text-sm mb-2">Demo Credentials:</p>
-                <p className="text-[#FFD600] text-xs">Email: teacher@university.edu</p>
-                <p className="text-[#FFD600] text-xs">Password: teacher123</p>
-              </div>
             </div>
           </GlassCard>
         </motion.div>

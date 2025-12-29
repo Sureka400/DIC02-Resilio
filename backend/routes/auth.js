@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 
+const { authenticate } = require('../middleware/auth');
+
 const router = express.Router();
 
 // Register user
@@ -72,6 +74,44 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
+    // Support dummy credentials for testing
+    const dummyUsers = {
+      'admin@resolio.com': { password: 'admin123', name: 'Admin User', role: 'admin' },
+      'student@resolio.com': { password: 'student123', name: 'Student User', role: 'student' },
+      'teacher@resolio.com': { password: 'teacher123', name: 'Teacher User', role: 'teacher' }
+    };
+
+    if (dummyUsers[email] && password === dummyUsers[email].password) {
+      let user = await User.findOne({ email });
+      if (!user) {
+        // Create dummy user if it doesn't exist
+        user = new User({
+          name: dummyUsers[email].name,
+          email: email,
+          password: password,
+          role: dummyUsers[email].role
+        });
+        await user.save();
+      }
+      
+      const token = jwt.sign(
+        { userId: user._id, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '7d' }
+      );
+
+      return res.json({
+        message: 'Login successful (Dummy)',
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
+    }
+
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
@@ -113,11 +153,13 @@ router.post('/login', [
 });
 
 // Get current user profile
-router.get('/profile', async (req, res) => {
+router.get('/profile', authenticate, async (req, res) => {
   try {
-    // This would normally use middleware to verify token
-    // For now, return a placeholder
-    res.json({ message: 'Profile endpoint - implement authentication middleware' });
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

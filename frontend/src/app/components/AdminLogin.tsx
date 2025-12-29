@@ -2,27 +2,34 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Shield, Eye, EyeOff, ArrowLeft, Mail, Lock } from 'lucide-react';
 import { GlassCard } from './GlassCard';
+import { authAPI } from '../api';
 
 interface AdminLoginProps {
   onLogin: () => void;
   onBack: () => void;
+  onSignUp: () => void;
 }
 
-export function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
+export function AdminLogin({ onLogin, onBack, onSignUp }: AdminLoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await authAPI.login(email, password);
       onLogin();
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -121,6 +128,18 @@ export function AdminLogin({ onLogin, onBack }: AdminLoginProps) {
                   )}
                 </button>
               </form>
+
+              <div className="mt-6 text-center">
+                <p className="text-[#a8a6a1] text-sm">
+                  Don't have an account?{' '}
+                  <button
+                    onClick={onSignUp}
+                    className="text-[#FF3333] hover:text-[#FF5555] font-semibold transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </p>
+              </div>
 
               {/* Demo Credentials */}
               <div className="mt-6 p-4 bg-[#1a1a1a] rounded-lg">

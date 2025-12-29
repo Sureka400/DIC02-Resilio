@@ -8,9 +8,10 @@ import { AdminLogin } from './components/AdminLogin';
 import { StudentDashboard } from './components/StudentDashboard';
 import { TeacherDashboard } from './components/TeacherDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
+import { SignUpPage } from './components/SignUpPage';
 import { GlitterEffect } from './components/GlitterEffect';
 
-type View = 'landing' | 'login' | 'student-login' | 'teacher-login' | 'admin-login' | 'student' | 'teacher' | 'admin';
+type View = 'landing' | 'login' | 'signup' | 'student-login' | 'teacher-login' | 'admin-login' | 'student' | 'teacher' | 'admin';
 type Role = 'student' | 'teacher' | 'admin' | null;
 
 export default function App() {
@@ -21,6 +22,10 @@ export default function App() {
     setCurrentView('login');
   };
 
+  const handleSignUpClick = () => {
+    setCurrentView('signup');
+  };
+
   const handleRoleSelect = (role: Role) => {
     setUserRole(role);
     if (role === 'student') setCurrentView('student-login');
@@ -29,9 +34,18 @@ export default function App() {
   };
 
   const handleLoginSuccess = () => {
-    if (userRole === 'student') setCurrentView('student');
-    if (userRole === 'teacher') setCurrentView('teacher');
-    if (userRole === 'admin') setCurrentView('admin');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setUserRole(user.role);
+    if (user.role === 'student') setCurrentView('student');
+    if (user.role === 'teacher') setCurrentView('teacher');
+    if (user.role === 'admin') setCurrentView('admin');
+  };
+
+  const handleSignUpSuccess = (role: 'student' | 'teacher' | 'admin') => {
+    setUserRole(role);
+    if (role === 'student') setCurrentView('student');
+    if (role === 'teacher') setCurrentView('teacher');
+    if (role === 'admin') setCurrentView('admin');
   };
 
   const handleBackToRoleSelect = () => {
@@ -70,6 +84,29 @@ export default function App() {
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
             <LoginPage onRoleSelect={handleRoleSelect} />
+            <div className="absolute bottom-12 left-0 right-0 text-center z-20">
+              <p className="text-[#a8a6a1]">
+                Don't have an account?{' '}
+                <button
+                  onClick={handleSignUpClick}
+                  className="text-[#FFD600] hover:text-[#FFB800] font-semibold transition-colors"
+                >
+                  Sign Up Now
+                </button>
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {currentView === 'signup' && (
+          <motion.div
+            key="signup"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <SignUpPage onSignUp={handleSignUpSuccess} onBack={() => setCurrentView('login')} />
           </motion.div>
         )}
 
@@ -81,7 +118,7 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <StudentLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} />
+            <StudentLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} onSignUp={handleSignUpClick} />
           </motion.div>
         )}
 
@@ -93,7 +130,7 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <TeacherLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} />
+            <TeacherLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} onSignUp={handleSignUpClick} />
           </motion.div>
         )}
 
@@ -105,7 +142,7 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            <AdminLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} />
+            <AdminLogin onLogin={handleLoginSuccess} onBack={handleBackToRoleSelect} onSignUp={handleSignUpClick} />
           </motion.div>
         )}
 

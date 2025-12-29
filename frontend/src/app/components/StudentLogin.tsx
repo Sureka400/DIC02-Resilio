@@ -2,27 +2,34 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { GraduationCap, Eye, EyeOff, ArrowLeft, Mail, Lock } from 'lucide-react';
 import { GlassCard } from './GlassCard';
+import { authAPI } from '../api';
 
 interface StudentLoginProps {
   onLogin: () => void;
   onBack: () => void;
+  onSignUp: () => void;
 }
 
-export function StudentLogin({ onLogin, onBack }: StudentLoginProps) {
+export function StudentLogin({ onLogin, onBack, onSignUp }: StudentLoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await authAPI.login(email, password);
       onLogin();
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,6 +63,12 @@ export function StudentLogin({ onLogin, onBack }: StudentLoginProps) {
                 <h2 className="text-2xl font-bold text-[#e8e6e1] mb-2">Student Login</h2>
                 <p className="text-[#a8a6a1]">Access your learning dashboard</p>
               </div>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm text-center">
+                  {error}
+                </div>
+              )}
 
               {/* Login Form */}
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -121,6 +134,18 @@ export function StudentLogin({ onLogin, onBack }: StudentLoginProps) {
                   )}
                 </button>
               </form>
+
+              <div className="mt-6 text-center">
+                <p className="text-[#a8a6a1] text-sm">
+                  Don't have an account?{' '}
+                  <button
+                    onClick={onSignUp}
+                    className="text-[#FFD600] hover:text-[#FFB800] font-semibold transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </p>
+              </div>
 
               {/* Demo Credentials */}
               <div className="mt-6 p-4 bg-[#1a1a1a] rounded-lg">

@@ -1,6 +1,8 @@
 const express = require('express');
 const Course = require('../models/Course');
 
+const { authenticate } = require('../middleware/auth');
+
 const router = express.Router();
 
 // Get all courses (public)
@@ -42,10 +44,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // Enroll student in course (requires authentication)
-router.post('/:id/enroll', async (req, res) => {
+router.post('/:id/enroll', authenticate, async (req, res) => {
   try {
-    // TODO: Add authentication middleware
-    const studentId = req.body.studentId; // This should come from authenticated user
+    const studentId = req.user.id;
 
     const course = await Course.findById(req.params.id);
     if (!course) {
@@ -67,9 +68,8 @@ router.post('/:id/enroll', async (req, res) => {
 });
 
 // Get course assignments (requires enrollment)
-router.get('/:id/assignments', async (req, res) => {
+router.get('/:id/assignments', authenticate, async (req, res) => {
   try {
-    // TODO: Check if user is enrolled or is teacher
     const course = await Course.findById(req.params.id)
       .populate({
         path: 'assignments',
@@ -81,6 +81,14 @@ router.get('/:id/assignments', async (req, res) => {
 
     if (!course) {
       return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Check if user is enrolled or is teacher of this course
+    const isEnrolled = course.students.includes(req.user.id);
+    const isTeacher = course.teacher.toString() === req.user.id;
+
+    if (!isEnrolled && !isTeacher) {
+      return res.status(403).json({ message: 'Not authorized to view assignments for this course' });
     }
 
     res.json(course.assignments);

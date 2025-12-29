@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bot, User, Send } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Bot, User, Send, Paperclip, FileUp } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { chatAPI } from '../api';
 
@@ -43,6 +43,16 @@ export function ChatComponent({ title, placeholder, role }: ChatComponentProps) 
     setIsLoading(true);
 
     try {
+      // First, check if backend is reachable
+      try {
+        const healthCheck = await fetch('/api/health').catch(() => null);
+        if (!healthCheck || !healthCheck.ok) {
+          throw new Error('Backend server is unreachable via proxy. Please ensure backend is running on port 5000.');
+        }
+      } catch (e: any) {
+        throw new Error('Backend server is unreachable via proxy. Please ensure backend is running on port 5000.');
+      }
+
       const response = await chatAPI.sendMessage(inputMessage, role);
 
       const aiMessage: Message = {
@@ -53,11 +63,13 @@ export function ChatComponent({ title, placeholder, role }: ChatComponentProps) 
       };
 
       setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'Sorry, I encountered an error. Please try again.',
+        text: error.message === 'Failed to send message' 
+          ? 'Connection error: Please ensure the backend server is running on port 5000.'
+          : `AI Service Notice: ${error.message}`,
         isAI: true,
         timestamp: new Date(),
       };

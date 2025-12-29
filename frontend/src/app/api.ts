@@ -1,5 +1,5 @@
 // API utility functions
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 
 export interface ChatMessage {
   message: string;
@@ -23,7 +23,8 @@ export const chatAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to send message');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.response || errorData.message || 'Failed to send message');
     }
 
     return response.json();

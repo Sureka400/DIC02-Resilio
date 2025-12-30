@@ -1,0 +1,15 @@
+{
+  "name": "resolio-monorepo",
+  "version": "1.0.0",
+  "description": "Monorepo for Resolio educational platform",
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "npm run all",
+    "all": "concurrently \"npm run backend\" \"npm run frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

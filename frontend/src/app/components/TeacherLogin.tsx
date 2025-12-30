@@ -7,14 +7,22 @@ import { authAPI } from '../api';
 interface TeacherLoginProps {
   onLogin: () => void;
   onBack: () => void;
+<<<<<<< HEAD
   onSignup: () => void;
 }
 
 export function TeacherLogin({ onLogin, onBack, onSignup }: TeacherLoginProps) {
+=======
+  onSignUp: () => void;
+}
+
+export function TeacherLogin({ onLogin, onBack, onSignUp }: TeacherLoginProps) {
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -24,11 +32,19 @@ export function TeacherLogin({ onLogin, onBack, onSignup }: TeacherLoginProps) {
     setError(null);
 
     try {
+<<<<<<< HEAD
       await authAPI.login({ email, password });
       setIsLoading(false);
       onLogin();
     } catch (err: any) {
       setError(err.message || 'Login failed');
+=======
+      await authAPI.login(email, password);
+      onLogin();
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password');
+    } finally {
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
       setIsLoading(false);
     }
   };
@@ -65,6 +81,12 @@ export function TeacherLogin({ onLogin, onBack, onSignup }: TeacherLoginProps) {
                 <p className="text-[#a8a6a1]">Access your teaching dashboard</p>
                 {error && <p className="text-red-400 mt-4 text-sm bg-red-400/10 p-2 rounded">{error}</p>}
               </div>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm text-center">
+                  {error}
+                </div>
+              )}
 
               {/* Login Form */}
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -131,6 +153,7 @@ export function TeacherLogin({ onLogin, onBack, onSignup }: TeacherLoginProps) {
                 </button>
               </form>
 
+<<<<<<< HEAD
               <div className="mt-6 text-center text-sm">
                 <p className="text-[#a8a6a1]">
                   Don't have an account?{' '}
@@ -139,6 +162,16 @@ export function TeacherLogin({ onLogin, onBack, onSignup }: TeacherLoginProps) {
                     className="text-[#FFD600] font-semibold hover:underline"
                   >
                     Sign up
+=======
+              <div className="mt-6 text-center">
+                <p className="text-[#a8a6a1] text-sm">
+                  Don't have an account?{' '}
+                  <button
+                    onClick={onSignUp}
+                    className="text-[#FFD600] hover:text-[#FFB800] font-semibold transition-colors"
+                  >
+                    Sign Up
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
                   </button>
                 </p>
               </div>

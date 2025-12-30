@@ -46,15 +46,17 @@ router.get('/dashboard', [authenticate, requireStudent], async (req, res) => {
       };
     }).filter(item => item.grade !== undefined);
 
+    // Get current student profile
+    const user = await User.findById(studentId);
+
     res.json({
       courses: courses.length,
       upcomingAssignments,
       recentGrades: grades.slice(0, 5),
       profile: {
-        // TODO: Get from user model
-        name: 'Student Name',
-        grade: '10th Grade',
-        gpa: 3.8
+        name: user.name,
+        grade: user.academicInfo?.grade || 'N/A',
+        gpa: grades.length > 0 ? (grades.reduce((sum, g) => sum + (g.grade / 100) * 4, 0) / grades.length).toFixed(2) : 0
       }
     });
   } catch (error) {

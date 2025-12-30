@@ -25,6 +25,7 @@ import { GlassCard } from './GlassCard';
 import { TabNavigation } from './TabNavigation';
 import { ChartCard } from './ChartCard';
 import { ChatComponent } from './ChatComponent';
+<<<<<<< HEAD
 import { 
   Dialog, 
   DialogContent, 
@@ -43,6 +44,9 @@ import {
   SelectTrigger, 
   SelectValue 
 } from './ui/select';
+=======
+import { AiInsights } from './AiInsights';
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { teacherAPI } from '../api';
 

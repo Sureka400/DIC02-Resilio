@@ -3,6 +3,8 @@ const Course = require('../models/Course');
 const Material = require('../models/Material');
 const { authenticate, requireTeacher, requireStudent } = require('../middleware/auth');
 
+const { authenticate } = require('../middleware/auth');
+
 const router = express.Router();
 
 // Get all courses (public)
@@ -44,9 +46,15 @@ router.get('/:id', async (req, res) => {
 });
 
 // Enroll student in course (requires authentication)
+<<<<<<< HEAD
 router.post('/:id/enroll', authenticate, requireStudent, async (req, res) => {
   try {
     const studentId = req.user.id; // Get from authenticated user
+=======
+router.post('/:id/enroll', authenticate, async (req, res) => {
+  try {
+    const studentId = req.user.id;
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
 
     const course = await Course.findById(req.params.id);
     if (!course) {
@@ -67,6 +75,7 @@ router.post('/:id/enroll', authenticate, requireStudent, async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 // Join course by class code (requires authentication)
 router.post('/join', authenticate, requireStudent, async (req, res) => {
   try {
@@ -100,6 +109,11 @@ router.post('/join', authenticate, requireStudent, async (req, res) => {
 router.get('/:id/assignments', authenticate, async (req, res) => {
   try {
     // Check if user is enrolled or is teacher
+=======
+// Get course assignments (requires enrollment)
+router.get('/:id/assignments', authenticate, async (req, res) => {
+  try {
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
     const course = await Course.findById(req.params.id)
       .populate({
         path: 'assignments',
@@ -113,6 +127,7 @@ router.get('/:id/assignments', authenticate, async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
 
+<<<<<<< HEAD
     // Allow if user is teacher of the course or enrolled student
     const isTeacher = course.teacher.toString() === req.user.id;
     const isEnrolled = course.students.includes(req.user.id);
@@ -162,6 +177,17 @@ router.get('/:id/materials', authenticate, async (req, res) => {
       .sort({ uploadedAt: -1 });
 
     res.json(materials);
+=======
+    // Check if user is enrolled or is teacher of this course
+    const isEnrolled = course.students.includes(req.user.id);
+    const isTeacher = course.teacher.toString() === req.user.id;
+
+    if (!isEnrolled && !isTeacher) {
+      return res.status(403).json({ message: 'Not authorized to view assignments for this course' });
+    }
+
+    res.json(course.assignments);
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

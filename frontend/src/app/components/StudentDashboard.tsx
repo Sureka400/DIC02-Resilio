@@ -15,17 +15,22 @@ import {
   Brain,
   Trophy,
   Star,
+<<<<<<< HEAD
   Plus,
   CheckCircle,
   Send,
   X,
   AlertCircle,
   Eye
+=======
+  BarChart3
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
 } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { TabNavigation } from './TabNavigation';
 import { ChartCard } from './ChartCard';
 import { ChatComponent } from './ChatComponent';
+import { AiInsights } from './AiInsights';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { studentAPI, courseAPI } from '../api';
 
@@ -142,6 +147,11 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'classroom', label: 'Classroom', icon: BookOpen },
     { id: 'ai-assistant', label: 'AI Assistant', icon: Bot },
+<<<<<<< HEAD
+=======
+    { id: 'insights', label: 'AI Insights', icon: BarChart3 },
+    { id: 'projects', label: 'Projects', icon: FolderKanban },
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
     { id: 'progress', label: 'Progress & Well-Being', icon: TrendingUp },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'profile', label: 'Profile', icon: User },
@@ -746,6 +756,143 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
             </motion.div>
           )}
 
+<<<<<<< HEAD
+=======
+          {activeTab === 'insights' && (
+            <motion.div
+              key="insights"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <AiInsights 
+                role="student" 
+                data={{ 
+                  grades: assignmentProgressData, 
+                  skills: skillsData,
+                  studyConsistency: studyConsistencyData 
+                }} 
+              />
+            </motion.div>
+          )}
+
+          {activeTab === 'projects' && (
+            <motion.div
+              key="projects"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                {[
+                  {
+                    title: 'Smart Campus Navigation App',
+                    description: 'Develop an app to help students navigate campus efficiently',
+                    team: ['Alice Johnson', 'Bob Smith', 'Charlie Brown'],
+                    deadline: 'Feb 15, 2026',
+                    status: 'in-progress',
+                    progress: 65,
+                    technologies: ['React Native', 'Node.js', 'MongoDB']
+                  },
+                  {
+                    title: 'AI Study Planner',
+                    description: 'Create an AI-powered study schedule generator',
+                    team: ['Diana Prince', 'Eve Wilson'],
+                    deadline: 'Jan 30, 2026',
+                    status: 'planning',
+                    progress: 20,
+                    technologies: ['Python', 'TensorFlow', 'React']
+                  },
+                  {
+                    title: 'Virtual Chemistry Lab',
+                    description: 'Build a virtual reality chemistry laboratory',
+                    team: ['Frank Miller', 'Grace Lee', 'Henry Davis', 'Ivy Chen'],
+                    deadline: 'Mar 10, 2026',
+                    status: 'in-progress',
+                    progress: 40,
+                    technologies: ['Unity', 'C#', 'VR SDK']
+                  },
+                  {
+                    title: 'Campus Sustainability Dashboard',
+                    description: 'Monitor and visualize campus environmental impact',
+                    team: ['Jack Taylor', 'Kate Wilson'],
+                    deadline: 'Feb 28, 2026',
+                    status: 'completed',
+                    progress: 100,
+                    technologies: ['React', 'D3.js', 'Node.js']
+                  }
+                ].map((project, index) => (
+                  <motion.div
+                    key={project.title}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                  >
+                    <GlassCard>
+                      <div className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <h3 className="text-[#e8e6e1] font-semibold mb-2">{project.title}</h3>
+                            <p className="text-[#a8a6a1] text-sm mb-3">{project.description}</p>
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {project.technologies.map((tech) => (
+                                <span key={tech} className="px-2 py-1 bg-[#FFD600]/10 text-[#FFD600] text-xs rounded-full">
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            project.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                            project.status === 'in-progress' ? 'bg-[#FFD600]/20 text-[#FFD600]' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {project.status === 'completed' ? 'Completed' :
+                             project.status === 'in-progress' ? 'In Progress' : 'Planning'}
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-3 mb-4">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-[#a8a6a1]">Team:</span>
+                            <span className="text-[#e8e6e1]">{project.team.length} members</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-[#a8a6a1]">Deadline:</span>
+                            <span className="text-[#FFD600]">{project.deadline}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-[#a8a6a1]">Progress:</span>
+                            <span className="text-[#e8e6e1]">{project.progress}%</span>
+                          </div>
+                        </div>
+                        
+                        <div className="w-full bg-[#1a1a1a] rounded-full h-2 mb-4">
+                          <div 
+                            className="bg-[#FFD600] h-2 rounded-full transition-all duration-1000"
+                            style={{ width: `${project.progress}%` }}
+                          />
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <button className="flex-1 btn-3d bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors">
+                            View Project
+                          </button>
+                          <button className="btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-4 rounded-lg hover:bg-[#2a2a2a] transition-colors">
+                            <User className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </GlassCard>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+>>>>>>> 6d788d8537408203b3ed942a31960d7c4700437b
           {activeTab === 'schedule' && (
             <motion.div
               key="schedule"

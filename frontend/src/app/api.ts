@@ -1,8 +1,18 @@
-// API utility functions
-const API_BASE_URL = 'http://localhost:3001/api';
 
-// Auth token management
+const API_BASE_URL = 'http://localhost:3001/api';
 let authToken: string | null = null;
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'student' | 'teacher' | 'admin';
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
 
 export const setAuthToken = (token: string) => {
   authToken = token;
@@ -19,6 +29,15 @@ export const getAuthToken = (): string | null => {
 export const clearAuthToken = () => {
   authToken = null;
   localStorage.removeItem('authToken');
+  localStorage.removeItem('user');
+};
+
+export const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
 };
 
 // Auth API
@@ -41,6 +60,9 @@ export const authAPI = {
     if (data.token) {
       setAuthToken(data.token);
     }
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
     return data;
   },
 
@@ -62,7 +84,19 @@ export const authAPI = {
     if (data.token) {
       setAuthToken(data.token);
     }
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
     return data;
+  },
+
+  logout: () => {
+    clearAuthToken();
+  },
+
+  getCurrentUser: (): User | null => {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
   },
 
   getProfile: async () => {
@@ -392,15 +426,7 @@ export const studentAPI = {
   },
 };
 
-export interface ChatMessage {
-  message: string;
-  role: 'student' | 'teacher';
-}
-
-export interface ChatResponse {
-  response: string;
-}
-
+// Chat API
 export const chatAPI = {
   sendMessage: async (message: string, role: 'student' | 'teacher'): Promise<ChatResponse> => {
     const token = getAuthToken();
@@ -428,3 +454,12 @@ export const chatAPI = {
     return response.json();
   },
 };
+
+export interface ChatMessage {
+  message: string;
+  role: 'student' | 'teacher';
+}
+
+export interface ChatResponse {
+  response: string;
+}

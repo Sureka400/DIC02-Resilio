@@ -396,6 +396,28 @@ export const studentAPI = {
     if (!response.ok) throw new Error('Failed to fetch grades');
     return response.json();
   },
+  
+  getBehavior: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/behavior`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch behavior data');
+    return response.json();
+  },
+
+  getPsychoProfile: async () => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/profile/me`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch psycho-educational profile');
+    return response.json();
+  },
 };
 
 export interface ChatMessage {

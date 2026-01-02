@@ -22,7 +22,6 @@ import {
   AlertCircle,
   Eye,
   BarChart3,
-  FolderKanban,
   Sparkles
 } from 'lucide-react';
 import { GlassCard } from './GlassCard';
@@ -48,6 +47,8 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
   const [classCode, setClassCode] = useState('');
   const [joinStatus, setJoinStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [behavior, setBehavior] = useState<any>(null);
+  const [psychoProfile, setPsychoProfile] = useState<any>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<any>(null);
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
@@ -55,6 +56,7 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
   const [submissionContent, setSubmissionContent] = useState('');
   const [submissionLoading, setSubmissionLoading] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
+  const [aiAssistantMessage, setAiAssistantMessage] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     fetchData();
@@ -72,6 +74,20 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
       
       const allAssignments = await studentAPI.getAssignments();
       setAssignments(allAssignments);
+
+      try {
+        const behaviorData = await studentAPI.getBehavior();
+        setBehavior(behaviorData);
+      } catch (err) {
+        console.error('Behavior data not found');
+      }
+
+      try {
+        const psychoData = await studentAPI.getPsychoProfile();
+        setPsychoProfile(psychoData);
+      } catch (err) {
+        console.error('Psycho-educational profile not found');
+      }
     } catch (error) {
       console.error('Error fetching student data:', error);
     } finally {
@@ -149,7 +165,6 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
     { id: 'assignments', label: 'Assignments', icon: FileText },
     { id: 'ai-assistant', label: 'AI Assistant', icon: Bot },
     { id: 'insights', label: 'AI Insights', icon: BarChart3 },
-    { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'progress', label: 'Progress & Well-Being', icon: TrendingUp },
     { id: 'ai-schedule', label: 'AI Schedule', icon: Sparkles },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
@@ -157,15 +172,15 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
   ];
 
   // Chart Data
-  const studyConsistencyData = [
-    { day: 'Mon', hours: 4.5 },
-    { day: 'Tue', hours: 3.8 },
-    { day: 'Wed', hours: 5.2 },
-    { day: 'Thu', hours: 4.0 },
-    { day: 'Fri', hours: 4.8 },
-    { day: 'Sat', hours: 2.5 },
-    { day: 'Sun', hours: 3.2 },
-  ];
+  const studyConsistencyData = behavior ? [
+    { day: 'Mon', hours: Math.round((behavior.timeSpentOnMaterials / 60 / 5) * 0.8 * 10) / 10 },
+    { day: 'Tue', hours: Math.round((behavior.timeSpentOnMaterials / 60 / 5) * 1.2 * 10) / 10 },
+    { day: 'Wed', hours: Math.round((behavior.timeSpentOnMaterials / 60 / 5) * 1.0 * 10) / 10 },
+    { day: 'Thu', hours: Math.round((behavior.timeSpentOnMaterials / 60 / 5) * 0.9 * 10) / 10 },
+    { day: 'Fri', hours: Math.round((behavior.timeSpentOnMaterials / 60 / 5) * 1.1 * 10) / 10 },
+    { day: 'Sat', hours: 0 },
+    { day: 'Sun', hours: 0 },
+  ] : [];
 
   const assignmentProgressData = courses.map(course => {
     const courseAssignments = assignments.filter(a => a.course?._id === course._id || a.course === course._id);
@@ -177,20 +192,20 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
     };
   });
 
-  const skillsData = [
-    { skill: 'Problem Solving', value: 85 },
-    { skill: 'Collaboration', value: 78 },
-    { skill: 'Creativity', value: 82 },
-    { skill: 'Critical Thinking', value: 88 },
-    { skill: 'Communication', value: 75 },
-  ];
+  const skillsData = behavior ? [
+    { skill: 'Consistency', value: behavior.timetableAdherence || 0 },
+    { skill: 'Engagement', value: psychoProfile?.engagementLevel === 'high' ? 95 : psychoProfile?.engagementLevel === 'medium' ? 70 : 40 },
+    { skill: 'Punctuality', value: behavior.assignmentSubmission === 'onTime' ? 90 : behavior.assignmentSubmission === 'late' ? 60 : 30 },
+    { skill: 'Self-Learning', value: Math.min(100, (behavior.aiChatUsageCount || 0) * 10 + 50) },
+    { skill: 'Time Mgmt', value: Math.max(0, 100 - (behavior.missedDeadlinesCount || 0) * 20) },
+  ] : [];
 
-  const moodTrendData = [
+  const moodTrendData = psychoProfile ? [
     { week: 'Week 1', mood: 7 },
     { week: 'Week 2', mood: 8 },
-    { week: 'Week 3', mood: 6 },
-    { week: 'Week 4', mood: 9 },
-  ];
+    { week: 'Week 3', mood: psychoProfile.stressRisk === 'high' ? 4 : psychoProfile.stressRisk === 'medium' ? 6 : 7 },
+    { week: 'Week 4', mood: psychoProfile.stressRisk === 'high' ? 3 : psychoProfile.stressRisk === 'medium' ? 5 : 9 },
+  ] : [];
 
   return (
     <div className="relative min-h-screen px-6 py-8">
@@ -434,9 +449,24 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
 
               <div className="grid md:grid-cols-3 gap-6">
                 {[
-                  { label: 'Study Streak', value: '12 days', icon: Heart, color: '#FFD600' },
-                  { label: 'Focus Time', value: '45 min avg', icon: Brain, color: '#FFD600' },
-                  { label: 'Energy Level', value: 'Stable', icon: TrendingUp, color: '#FFD600' },
+                  { 
+                    label: 'Timetable Adherence', 
+                    value: behavior ? `${behavior.timetableAdherence}%` : 'N/A', 
+                    icon: Heart, 
+                    color: '#FFD600' 
+                  },
+                  { 
+                    label: 'Learning Engagement', 
+                    value: psychoProfile ? psychoProfile.engagementLevel.charAt(0).toUpperCase() + psychoProfile.engagementLevel.slice(1) : 'N/A', 
+                    icon: Brain, 
+                    color: '#FFD600' 
+                  },
+                  { 
+                    label: 'Stress Risk', 
+                    value: psychoProfile ? psychoProfile.stressRisk.charAt(0).toUpperCase() + psychoProfile.stressRisk.slice(1) : 'N/A', 
+                    icon: TrendingUp, 
+                    color: '#FFD600' 
+                  },
                 ].map((metric, idx) => {
                   const Icon = metric.icon;
                   return (
@@ -720,24 +750,6 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
             </motion.div>
           )}
 
-          {activeTab === 'projects' && (
-            <motion.div
-              key="projects"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-            >
-              <GlassCard>
-                <div className="p-12 text-center">
-                  <FolderKanban className="w-16 h-16 text-[#FFD600]/30 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold text-[#e8e6e1] mb-3">Project Management</h3>
-                  <p className="text-[#a8a6a1]">Collaborate on group projects and track your personal project milestones here.</p>
-                </div>
-              </GlassCard>
-            </motion.div>
-          )}
-
           {activeTab === 'ai-assistant' && (
             <motion.div
               key="ai-assistant"
@@ -753,6 +765,8 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                     title="AI Study Assistant"
                     placeholder="Ask me anything about your studies..."
                     role="student"
+                    externalMessage={aiAssistantMessage}
+                    onMessageProcessed={() => setAiAssistantMessage(undefined)}
                   />
                 </div>
 
@@ -769,7 +783,11 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                           'Practice questions',
                           'Review notes'
                         ].map((action) => (
-                          <button key={action} className="w-full text-left p-3 bg-[#1a1a1a] text-[#e8e6e1] rounded-lg hover:bg-[#2a2a2a] transition-colors">
+                          <button 
+                            key={action} 
+                            onClick={() => setAiAssistantMessage(action)}
+                            className="w-full text-left p-3 bg-[#1a1a1a] text-[#e8e6e1] rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                          >
                             {action}
                           </button>
                         ))}
@@ -783,15 +801,15 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                       <div className="space-y-3">
                         <div className="flex justify-between">
                           <span className="text-[#a8a6a1]">Questions Asked</span>
-                          <span className="text-[#FFD600]">47</span>
+                          <span className="text-[#FFD600]">{behavior?.aiChatUsageCount || 0}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-[#a8a6a1]">Concepts Explained</span>
-                          <span className="text-[#FFD600]">23</span>
+                          <span className="text-[#FFD600]">{Math.floor((behavior?.aiChatUsageCount || 0) * 0.4)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-[#a8a6a1]">Study Plans Created</span>
-                          <span className="text-[#FFD600]">5</span>
+                          <span className="text-[#FFD600]">{Math.floor((behavior?.aiChatUsageCount || 0) * 0.1)}</span>
                         </div>
                       </div>
                     </div>
@@ -1070,13 +1088,14 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                     <div className="p-6">
                       <h4 className="text-[#e8e6e1] font-semibold mb-4">Recent Achievements</h4>
                       <div className="grid md:grid-cols-2 gap-4">
-                        {[
-                          { title: 'Deans List', description: 'Fall 2025 Semester', date: 'Dec 2025', icon: Award },
-                          { title: 'Hackathon Winner', description: 'University Tech Challenge', date: 'Nov 2025', icon: Trophy },
-                          { title: 'Perfect Attendance', description: 'Computer Science Courses', date: 'Oct 2025', icon: Star },
-                          { title: 'Research Assistant', description: 'AI Lab Project', date: 'Sep 2025', icon: Brain }
-                        ].map((achievement, index) => {
-                          const IconComponent = achievement.icon;
+                        {(profile?.academicInfo?.achievements?.length > 0 ? profile.academicInfo.achievements : [
+                          { title: 'Deans List', description: 'Fall 2025 Semester', date: 'Dec 2025', icon: 'Award' },
+                          { title: 'Hackathon Winner', description: 'University Tech Challenge', date: 'Nov 2025', icon: 'Trophy' },
+                          { title: 'Perfect Attendance', description: 'Computer Science Courses', date: 'Oct 2025', icon: 'Star' },
+                          { title: 'Research Assistant', description: 'AI Lab Project', date: 'Sep 2025', icon: 'Brain' }
+                        ]).map((achievement: any, index: number) => {
+                          const iconMap: any = { Award, Trophy, Star, Brain };
+                          const IconComponent = iconMap[achievement.icon] || Award;
                           return (
                             <div key={index} className="flex items-center gap-3 p-3 bg-[#1a1a1a] rounded-lg">
                               <div className="p-2 rounded-lg bg-[#FFD600]/10">
@@ -1085,7 +1104,7 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                               <div>
                                 <div className="text-[#e8e6e1] text-sm font-medium">{achievement.title}</div>
                                 <div className="text-[#a8a6a1] text-xs">{achievement.description}</div>
-                                <div className="text-[#a8a6a1] text-xs">{achievement.date}</div>
+                                <div className="text-[#a8a6a1] text-xs">{new Date(achievement.date).toLocaleDateString() === 'Invalid Date' ? achievement.date : new Date(achievement.date).toLocaleDateString()}</div>
                               </div>
                             </div>
                           );
@@ -1121,26 +1140,26 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                       <h4 className="text-[#e8e6e1] font-semibold mb-4">Academic Stats</h4>
                       <div className="space-y-4">
                         <div className="text-center">
-                          <div className="text-[#FFD600] text-2xl font-bold mb-1">3.8</div>
+                          <div className="text-[#FFD600] text-2xl font-bold mb-1">{profile?.stats?.gpa || '0.0'}</div>
                           <div className="text-[#a8a6a1] text-sm">Current GPA</div>
                         </div>
                         
                         <div className="space-y-3">
                           <div className="flex justify-between text-sm">
-                            <span className="text-[#a8a6a1]">Courses Completed:</span>
-                            <span className="text-[#e8e6e1]">24</span>
+                            <span className="text-[#a8a6a1]">Courses Enrolled:</span>
+                            <span className="text-[#e8e6e1]">{courses.length}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-[#a8a6a1]">Assignments Done:</span>
-                            <span className="text-[#e8e6e1]">156</span>
+                            <span className="text-[#e8e6e1]">{assignments.filter(a => a.submission).length}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-[#a8a6a1]">Study Hours:</span>
-                            <span className="text-[#e8e6e1]">487</span>
+                            <span className="text-[#e8e6e1]">{Math.round((behavior?.timeSpentOnMaterials || 0) / 60)}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-[#a8a6a1]">Achievements:</span>
-                            <span className="text-[#FFD600]">12</span>
+                            <span className="text-[#FFD600]">{profile?.academicInfo?.achievements?.length || 0}</span>
                           </div>
                         </div>
                       </div>

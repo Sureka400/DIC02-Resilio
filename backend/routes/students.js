@@ -226,14 +226,37 @@ router.get('/grades', [authenticate, requireStudent], async (req, res) => {
   }
 });
 
-// Get student profile
+// Get student profile with stats
 router.get('/profile', [authenticate, requireStudent], async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const studentId = req.user.id;
+    const user = await User.findById(studentId).select('-password');
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    // Get assignments for stats
+    const assignments = await Assignment.find({
+      course: {
+        $in: await Course.find({ students: studentId }).distinct('_id')
+      }
+    });
+
+    const submissions = assignments.filter(a => 
+      a.submissions.some(s => s.student.toString() === studentId)
+    );
+
+    const gradedSubmissions = submissions.map(a => {
+      const sub = a.submissions.find(s => s.student.toString() === studentId);
+      return { grade: sub.grade, totalPoints: a.totalPoints };
+    }).filter(s => s.grade !== undefined);
+
+    const averagePercentage = gradedSubmissions.length > 0
+      ? gradedSubmissions.reduce((sum, s) => sum + (s.grade / s.totalPoints) * 100, 0) / gradedSubmissions.length
+      : 0;
+    
+    const gpa = (averagePercentage / 100) * 4;
 
     res.json({
       id: user._id,
@@ -243,7 +266,12 @@ router.get('/profile', [authenticate, requireStudent], async (req, res) => {
       profile: user.profile,
       academicInfo: user.academicInfo,
       status: user.status,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      stats: {
+        gpa: Math.round(gpa * 100) / 100,
+        coursesCompleted: submissions.length, // Simple metric: assignments submitted
+        averageGrade: Math.round(averagePercentage * 10) / 10
+      }
     });
   } catch (error) {
     console.error(error);

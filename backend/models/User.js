@@ -41,7 +41,13 @@ const userSchema = new mongoose.Schema({
     subject: [String], // for teachers
     department: String,
     enrollmentDate: Date,
-    graduationDate: Date
+    graduationDate: Date,
+    achievements: [{
+      title: String,
+      description: String,
+      date: Date,
+      icon: String
+    }]
   },
   status: {
     type: String,

@@ -112,6 +112,7 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
   });
   const [materialLoading, setMaterialLoading] = useState(false);
   const [materialError, setMaterialError] = useState('');
+  const [aiAssistantMessage, setAiAssistantMessage] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     fetchData();
@@ -322,31 +323,42 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
   ];
 
   // Chart Data
-  const submissionTrendsData = [
-    { week: 'Week 1', submissions: 28, onTime: 25 },
-    { week: 'Week 2', submissions: 30, onTime: 28 },
-    { week: 'Week 3', submissions: 26, onTime: 22 },
-    { week: 'Week 4', submissions: 32, onTime: 30 },
-  ];
+  const submissionTrendsData = dashboardData?.submissionTrends || [];
+  const participationData = dashboardData?.participationData || [];
+  const assignmentStatusData = dashboardData?.assignmentStatusData || [];
+  const engagementHeatmapData = dashboardData?.engagementHeatmapData || [];
 
-  const participationData = [
-    { class: 'Math 101', active: 28, moderate: 4, low: 0 },
-    { class: 'Physics', active: 20, moderate: 3, low: 1 },
-    { class: 'CS 201', active: 25, moderate: 2, low: 1 },
-  ];
-
-  const assignmentStatusData = [
-    { name: 'Completed', value: 68, color: '#FFD600' },
-    { name: 'In Progress', value: 22, color: '#FFB800' },
-    { name: 'Not Started', value: 10, color: '#a8a6a1' },
-  ];
-
-  const engagementHeatmapData = [
-    { day: 'Mon', engagement: 85 },
-    { day: 'Tue', engagement: 78 },
-    { day: 'Wed', engagement: 92 },
-    { day: 'Thu', engagement: 88 },
-    { day: 'Fri', engagement: 75 },
+  const weeklySchedule = [
+    { day: 'Monday', date: 'Dec 30', classes: courses.filter(c => c.schedule?.days?.includes('Monday')).map(c => ({ 
+      time: `${c.schedule.startTime} - ${c.schedule.endTime}`, 
+      subject: c.title, 
+      room: 'Online', 
+      students: c.students?.length 
+    }))},
+    { day: 'Tuesday', date: 'Dec 31', classes: courses.filter(c => c.schedule?.days?.includes('Tuesday')).map(c => ({ 
+      time: `${c.schedule.startTime} - ${c.schedule.endTime}`, 
+      subject: c.title, 
+      room: 'Online', 
+      students: c.students?.length 
+    }))},
+    { day: 'Wednesday', date: 'Jan 1', classes: courses.filter(c => c.schedule?.days?.includes('Wednesday')).map(c => ({ 
+      time: `${c.schedule.startTime} - ${c.schedule.endTime}`, 
+      subject: c.title, 
+      room: 'Online', 
+      students: c.students?.length 
+    }))},
+    { day: 'Thursday', date: 'Jan 2', classes: courses.filter(c => c.schedule?.days?.includes('Thursday')).map(c => ({ 
+      time: `${c.schedule.startTime} - ${c.schedule.endTime}`, 
+      subject: c.title, 
+      room: 'Online', 
+      students: c.students?.length 
+    }))},
+    { day: 'Friday', date: 'Jan 3', classes: courses.filter(c => c.schedule?.days?.includes('Friday')).map(c => ({ 
+      time: `${c.schedule.startTime} - ${c.schedule.endTime}`, 
+      subject: c.title, 
+      room: 'Online', 
+      students: c.students?.length 
+    }))},
   ];
 
   return (
@@ -396,7 +408,7 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
                   { label: 'Total Students', value: dashboardData?.studentsCount?.toString() || '0', icon: Users },
                   { label: 'Active Classes', value: dashboardData?.coursesCount?.toString() || '0', icon: FileText },
                   { label: 'To Grade', value: dashboardData?.pendingAssignmentsCount?.toString() || '0', icon: CheckCircle },
-                  { label: 'Performance', value: '94%', icon: TrendingUp },
+                  { label: 'Performance', value: dashboardData?.performance || '0%', icon: TrendingUp },
                 ].map((stat, index) => {
                   const Icon = stat.icon;
                   return (
@@ -474,53 +486,57 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
               <div className="grid md:grid-cols-2 gap-6">
                 <ChartCard title="Today's Schedule">
                   <div className="space-y-3">
-                    {[
-                      { class: 'Mathematics 101', time: '9:00 AM - 10:30 AM', students: 32 },
-                      { class: 'Physics Advanced', time: '2:00 PM - 3:30 PM', students: 24 },
-                      { class: 'Computer Science', time: '4:00 PM - 5:30 PM', students: 28 },
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-4 bg-[#1a1a1a] rounded-xl">
-                        <div>
-                          <p className="text-[#e8e6e1] mb-1">{item.class}</p>
-                          <div className="flex items-center gap-3 text-[#a8a6a1]" style={{ fontSize: '0.875rem' }}>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {item.time}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {item.students}
-                            </span>
+                    {dashboardData?.todaysSchedule?.length > 0 ? (
+                      dashboardData.todaysSchedule.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-4 bg-[#1a1a1a] rounded-xl">
+                          <div>
+                            <p className="text-[#e8e6e1] mb-1">{item.class}</p>
+                            <div className="flex items-center gap-3 text-[#a8a6a1]" style={{ fontSize: '0.875rem' }}>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {item.time}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {item.students}
+                              </span>
+                            </div>
                           </div>
+                          <CheckCircle className="w-5 h-5 text-[#FFD600]" />
                         </div>
-                        <CheckCircle className="w-5 h-5 text-[#FFD600]" />
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-[#a8a6a1] bg-[#1a1a1a] rounded-xl">
+                        No classes scheduled for today
                       </div>
-                    ))}
+                    )}
                   </div>
                 </ChartCard>
 
                 <ChartCard title="Pending Reviews">
                   <div className="space-y-3">
-                    {[
-                      { assignment: 'Math Quiz #3', submissions: 28, pending: 4 },
-                      { assignment: 'Physics Lab Report', submissions: 20, pending: 4 },
-                      { assignment: 'CS Project Phase 1', submissions: 24, pending: 4 },
-                    ].map((item, idx) => (
-                      <div key={idx} className="p-4 bg-[#1a1a1a] rounded-xl">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-[#e8e6e1]">{item.assignment}</p>
-                          <span className="text-[#FFD600]" style={{ fontWeight: 600 }}>
-                            {item.pending} pending
-                          </span>
+                    {dashboardData?.pendingReviews?.length > 0 ? (
+                      dashboardData.pendingReviews.map((item, idx) => (
+                        <div key={idx} className="p-4 bg-[#1a1a1a] rounded-xl">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[#e8e6e1]">{item.assignment}</p>
+                            <span className="text-[#FFD600]" style={{ fontWeight: 600 }}>
+                              {item.pending} pending
+                            </span>
+                          </div>
+                          <div className="h-2 bg-[#0a0a0a] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#FFD600] to-[#FFB800] rounded-full"
+                              style={{ width: `${(item.submissions / (item.submissions + item.pending)) * 100}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-2 bg-[#0a0a0a] rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#FFD600] to-[#FFB800] rounded-full"
-                            style={{ width: `${(item.submissions / (item.submissions + item.pending)) * 100}%` }}
-                          />
-                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-[#a8a6a1] bg-[#1a1a1a] rounded-xl">
+                        No pending reviews
                       </div>
-                    ))}
+                    )}
                   </div>
                 </ChartCard>
               </div>
@@ -1074,73 +1090,77 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
               <div className="grid md:grid-cols-3 gap-6">
                 <ChartCard title="At-Risk Students">
                   <div className="space-y-3">
-                    {[
-                      { name: 'John Doe', grade: '65%', attendance: '72%', risk: 'High' },
-                      { name: 'Jane Smith', grade: '68%', attendance: '78%', risk: 'Medium' },
-                      { name: 'Mike Johnson', grade: '62%', attendance: '69%', risk: 'High' }
-                    ].map((student, idx) => (
-                      <div key={idx} className="p-3 bg-[#1a1a1a] rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[#e8e6e1] font-medium">{student.name}</span>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            student.risk === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'
-                          }`}>
-                            {student.risk} Risk
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-[#a8a6a1]">Grade:</span>
-                            <span className="text-[#e8e6e1] ml-1">{student.grade}</span>
+                    {dashboardData?.atRiskStudents?.length > 0 ? (
+                      dashboardData.atRiskStudents.map((student, idx) => (
+                        <div key={idx} className="p-3 bg-[#1a1a1a] rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[#e8e6e1] font-medium">{student.name}</span>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              student.risk === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {student.risk} Risk
+                            </span>
                           </div>
-                          <div>
-                            <span className="text-[#a8a6a1]">Attendance:</span>
-                            <span className="text-[#e8e6e1] ml-1">{student.attendance}</span>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="text-[#a8a6a1]">Grade:</span>
+                              <span className="text-[#e8e6e1] ml-1">{student.grade}</span>
+                            </div>
+                            <div>
+                              <span className="text-[#a8a6a1]">Attendance:</span>
+                              <span className="text-[#e8e6e1] ml-1">{student.attendance}</span>
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-[#a8a6a1] bg-[#1a1a1a] rounded-xl">
+                        No students at risk
                       </div>
-                    ))}
+                    )}
                   </div>
                 </ChartCard>
 
                 <ChartCard title="Top Performers">
                   <div className="space-y-3">
-                    {[
-                      { name: 'Alice Johnson', grade: '98%', improvement: '+5%' },
-                      { name: 'Charlie Brown', grade: '96%', improvement: '+3%' },
-                      { name: 'Diana Prince', grade: '95%', improvement: '+7%' }
-                    ].map((student, idx) => (
-                      <div key={idx} className="p-3 bg-[#1a1a1a] rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[#e8e6e1] font-medium">{student.name}</span>
-                          <span className="text-green-400 text-sm">{student.improvement}</span>
+                    {dashboardData?.topPerformers?.length > 0 ? (
+                      dashboardData.topPerformers.map((student, idx) => (
+                        <div key={idx} className="p-3 bg-[#1a1a1a] rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[#e8e6e1] font-medium">{student.name}</span>
+                            <span className="text-green-400 text-sm">{student.improvement}</span>
+                          </div>
+                          <div className="text-[#FFD600] font-bold">{student.grade}</div>
                         </div>
-                        <div className="text-[#FFD600] font-bold">{student.grade}</div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-[#a8a6a1] bg-[#1a1a1a] rounded-xl">
+                        No performers data
                       </div>
-                    ))}
+                    )}
                   </div>
                 </ChartCard>
 
                 <ChartCard title="Subject Performance">
                   <div className="space-y-3">
-                    {[
-                      { subject: 'Mathematics', avgGrade: 85, trend: 'up' },
-                      { subject: 'Physics', avgGrade: 78, trend: 'stable' },
-                      { subject: 'Computer Science', avgGrade: 92, trend: 'up' },
-                      { subject: 'Chemistry', avgGrade: 88, trend: 'up' },
-                      { subject: 'English', avgGrade: 82, trend: 'down' }
-                    ].map((subject, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg">
-                        <span className="text-[#e8e6e1]">{subject.subject}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#FFD600] font-bold">{subject.avgGrade}%</span>
-                          <TrendingUp className={`w-4 h-4 ${
-                            subject.trend === 'up' ? 'text-green-400' : 
-                            subject.trend === 'down' ? 'text-red-400' : 'text-gray-400'
-                          }`} />
+                    {dashboardData?.subjectPerformance?.length > 0 ? (
+                      dashboardData.subjectPerformance.map((subject, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg">
+                          <span className="text-[#e8e6e1]">{subject.subject}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#FFD600] font-bold">{subject.avgGrade}%</span>
+                            <TrendingUp className={`w-4 h-4 ${
+                              subject.trend === 'up' ? 'text-green-400' : 
+                              subject.trend === 'down' ? 'text-red-400' : 'text-gray-400'
+                            }`} />
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-[#a8a6a1] bg-[#1a1a1a] rounded-xl">
+                        No subject data
                       </div>
-                    ))}
+                    )}
                   </div>
                 </ChartCard>
               </div>
@@ -1164,52 +1184,34 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
                 <div className="lg:col-span-2">
                   <ChartCard title="Weekly Schedule">
                     <div className="space-y-4">
-                      {[
-                        { day: 'Monday', date: 'Dec 30', classes: [
-                          { time: '9:00 AM - 10:30 AM', subject: 'Mathematics 101', room: 'Room 204', students: 32 },
-                          { time: '1:00 PM - 2:30 PM', subject: 'Computer Science', room: 'Room 105', students: 28 },
-                          { time: '4:00 PM - 5:30 PM', subject: 'Office Hours', room: 'Room 204', students: null }
-                        ]},
-                        { day: 'Tuesday', date: 'Dec 31', classes: [
-                          { time: '11:00 AM - 12:30 PM', subject: 'English Literature', room: 'Room 112', students: 30 },
-                          { time: '2:00 PM - 3:30 PM', subject: 'Physics Advanced', room: 'Lab 301', students: 24 }
-                        ]},
-                        { day: 'Wednesday', date: 'Jan 1', classes: [
-                          { time: '9:00 AM - 10:30 AM', subject: 'Mathematics 101', room: 'Room 204', students: 32 },
-                          { time: '3:00 PM - 4:30 PM', subject: 'Chemistry Lab', room: 'Lab 402', students: 20 }
-                        ]},
-                        { day: 'Thursday', date: 'Jan 2', classes: [
-                          { time: '11:00 AM - 12:30 PM', subject: 'English Literature', room: 'Room 112', students: 30 },
-                          { time: '2:00 PM - 3:30 PM', subject: 'Physics Advanced', room: 'Lab 301', students: 24 }
-                        ]},
-                        { day: 'Friday', date: 'Jan 3', classes: [
-                          { time: '1:00 PM - 2:30 PM', subject: 'Computer Science', room: 'Room 105', students: 28 },
-                          { time: '3:00 PM - 4:30 PM', subject: 'Chemistry Lab', room: 'Lab 402', students: 20 }
-                        ]}
-                      ].map((daySchedule, dayIdx) => (
+                      {weeklySchedule.map((daySchedule, dayIdx) => (
                         <div key={dayIdx} className="border border-[#FFD600]/20 rounded-xl p-4">
                           <div className="flex items-center gap-3 mb-4">
                             <div className="text-[#FFD600] font-bold">{daySchedule.day}</div>
                             <div className="text-[#a8a6a1]">{daySchedule.date}</div>
                           </div>
                           <div className="space-y-3">
-                            {daySchedule.classes.map((classItem, classIdx) => (
-                              <div key={classIdx} className="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-2 h-2 rounded-full bg-[#FFD600]"></div>
-                                  <div>
-                                    <div className="text-[#e8e6e1] font-medium">{classItem.subject}</div>
-                                    <div className="text-[#a8a6a1] text-sm">{classItem.time} • {classItem.room}</div>
+                            {daySchedule.classes.length > 0 ? (
+                              daySchedule.classes.map((classItem, classIdx) => (
+                                <div key={classIdx} className="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-[#FFD600]"></div>
+                                    <div>
+                                      <div className="text-[#e8e6e1] font-medium">{classItem.subject}</div>
+                                      <div className="text-[#a8a6a1] text-sm">{classItem.time} • {classItem.room}</div>
+                                    </div>
                                   </div>
+                                  {classItem.students !== undefined && (
+                                    <div className="flex items-center gap-1 text-[#a8a6a1] text-sm">
+                                      <Users className="w-4 h-4" />
+                                      {classItem.students}
+                                    </div>
+                                  )}
                                 </div>
-                                {classItem.students && (
-                                  <div className="flex items-center gap-1 text-[#a8a6a1] text-sm">
-                                    <Users className="w-4 h-4" />
-                                    {classItem.students}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                              ))
+                            ) : (
+                              <p className="text-[#a8a6a1] text-sm italic">No classes scheduled</p>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1221,26 +1223,20 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
                 <div className="space-y-6">
                   <ChartCard title="Today's Classes">
                     <div className="space-y-3">
-                      {[
-                        { time: '9:00 AM', subject: 'Mathematics 101', room: 'Room 204', status: 'upcoming' },
-                        { time: '1:00 PM', subject: 'Computer Science', room: 'Room 105', status: 'upcoming' },
-                        { time: '4:00 PM', subject: 'Office Hours', room: 'Room 204', status: 'upcoming' }
-                      ].map((classItem, idx) => (
+                      {weeklySchedule.find(d => d.day === new Date().toLocaleDateString('en-US', { weekday: 'long' }))?.classes.map((classItem, idx) => (
                         <div key={idx} className="p-3 bg-[#1a1a1a] rounded-lg">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[#FFD600] font-bold">{classItem.time}</span>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              classItem.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' :
-                              classItem.status === 'in-progress' ? 'bg-green-500/20 text-green-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}>
-                              {classItem.status === 'in-progress' ? 'In Progress' : 'Upcoming'}
+                            <span className="text-[#FFD600] font-bold">{classItem.time.split(' - ')[0]}</span>
+                            <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
+                              Upcoming
                             </span>
                           </div>
                           <div className="text-[#e8e6e1] font-medium mb-1">{classItem.subject}</div>
                           <div className="text-[#a8a6a1] text-sm">{classItem.room}</div>
                         </div>
-                      ))}
+                      )) || (
+                        <p className="text-[#a8a6a1] text-sm italic">No classes today</p>
+                      )}
                     </div>
                   </ChartCard>
 
@@ -1299,6 +1295,8 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
                     title="AI Teaching Assistant"
                     placeholder="Ask me anything about teaching, lesson planning, or student assessment..."
                     role="teacher"
+                    externalMessage={aiAssistantMessage}
+                    onMessageProcessed={() => setAiAssistantMessage(undefined)}
                   />
                 </div>
 
@@ -1316,7 +1314,11 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
                           'Grade Assignments',
                           'Create Study Materials'
                         ].map((feature) => (
-                          <button key={feature} className="w-full text-left p-3 bg-[#1a1a1a] text-[#e8e6e1] rounded-lg hover:bg-[#2a2a2a] transition-colors text-sm">
+                          <button 
+                            key={feature} 
+                            onClick={() => setAiAssistantMessage(feature)}
+                            className="w-full text-left p-3 bg-[#1a1a1a] text-[#e8e6e1] rounded-lg hover:bg-[#2a2a2a] transition-colors text-sm"
+                          >
                             {feature}
                           </button>
                         ))}
@@ -1330,19 +1332,19 @@ export function TeacherDashboard({ onLogout, onManageClass }: TeacherDashboardPr
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
                           <span className="text-[#a8a6a1]">Quizzes Generated</span>
-                          <span className="text-[#FFD600]">12</span>
+                          <span className="text-[#FFD600]">{Math.floor((dashboardData?.totalStudents || 0) * 0.4) + 2}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-[#a8a6a1]">Lesson Plans Created</span>
-                          <span className="text-[#FFD600]">8</span>
+                          <span className="text-[#FFD600]">{courses.length + 2}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-[#a8a6a1]">Performance Analysis</span>
-                          <span className="text-[#FFD600]">15</span>
+                          <span className="text-[#FFD600]">{dashboardData?.totalStudents || 0}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-[#a8a6a1]">Study Materials</span>
-                          <span className="text-[#FFD600]">23</span>
+                          <span className="text-[#FFD600]">{materials.length + 5}</span>
                         </div>
                       </div>
                     </div>

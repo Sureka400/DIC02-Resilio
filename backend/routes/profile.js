@@ -82,6 +82,26 @@ router.post('/generate', authenticate, async (req, res) => {
 });
 
 /**
+ * @route GET /api/profile/me
+ * @desc Get current student's psycho-educational profile
+ * @access Private (Student only)
+ */
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const profile = await StudentProfile.findOne({ studentId: req.user.id });
+
+    if (!profile) {
+      return res.status(404).json({ message: 'Profile not found' });
+    }
+
+    res.json(profile);
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
  * @route GET /api/profile/:studentId
  * @desc Get student profile (Engagement & Risk levels)
  * @access Private

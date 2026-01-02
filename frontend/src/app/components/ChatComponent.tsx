@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bot, User, Send } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { chatAPI } from '../api';
@@ -14,9 +14,11 @@ interface ChatComponentProps {
   title: string;
   placeholder: string;
   role: 'student' | 'teacher';
+  externalMessage?: string;
+  onMessageProcessed?: () => void;
 }
 
-export function ChatComponent({ title, placeholder, role }: ChatComponentProps) {
+export function ChatComponent({ title, placeholder, role, externalMessage, onMessageProcessed }: ChatComponentProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -28,18 +30,26 @@ export function ChatComponent({ title, placeholder, role }: ChatComponentProps) 
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+  useEffect(() => {
+    if (externalMessage && !isLoading) {
+      processMessage(externalMessage);
+      if (onMessageProcessed) {
+        onMessageProcessed();
+      }
+    }
+  }, [externalMessage]);
+
+  const processMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputMessage,
+      text: text,
       isAI: false,
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
     setIsLoading(true);
 
     try {
@@ -53,7 +63,7 @@ export function ChatComponent({ title, placeholder, role }: ChatComponentProps) 
         throw new Error('Backend server is unreachable via proxy. Please ensure backend is running on port 3001.');
       }
 
-      const response = await chatAPI.sendMessage(inputMessage, role);
+      const response = await chatAPI.sendMessage(text, role);
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -85,6 +95,12 @@ export function ChatComponent({ title, placeholder, role }: ChatComponentProps) 
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSendMessage = () => {
+    if (!inputMessage.trim()) return;
+    processMessage(inputMessage);
+    setInputMessage('');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

@@ -5,6 +5,24 @@ const StudentBehavior = require('../models/StudentBehavior');
 const router = express.Router();
 
 /**
+ * @route GET /api/behavior
+ * @desc Get student behavior data
+ * @access Private (Student only)
+ */
+router.get('/', [authenticate, requireStudent], async (req, res) => {
+  try {
+    const behavior = await StudentBehavior.findOne({ studentId: req.user.id });
+    if (!behavior) {
+      return res.status(404).json({ message: 'Behavior data not found' });
+    }
+    res.json(behavior);
+  } catch (error) {
+    console.error('Error fetching behavior:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
  * @route POST /api/behavior/log
  * @desc Log student behavior data
  * @access Private (Student only)

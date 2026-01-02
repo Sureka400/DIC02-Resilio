@@ -85,6 +85,25 @@ export const authAPI = {
 
     return response.json();
   },
+
+  changePassword: async (passwordData: any) => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(passwordData),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || (data.errors && data.errors[0].msg) || 'Failed to change password');
+    }
+
+    return response.json();
+  },
 };
 
 // Course API

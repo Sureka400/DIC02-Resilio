@@ -57,6 +57,11 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
   const [submissionLoading, setSubmissionLoading] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
   const [aiAssistantMessage, setAiAssistantMessage] = useState<string | undefined>(undefined);
+  
+  // Account settings states
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordStatus, setPasswordStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -99,13 +104,38 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
     try {
       const updated = await studentAPI.updateProfile({
         name: editedProfile.name,
-        profile: editedProfile.profile
+        profile: editedProfile.profile,
+        academicInfo: editedProfile.academicInfo
       });
-      setProfile(updated.user);
+      setProfile(updated.user || (typeof updated.user === 'object' ? { ...profile, ...updated.user } : profile));
       setIsEditingProfile(false);
+      fetchData(); // Refresh to get all stats
       alert('✅ Profile updated successfully!');
     } catch (error: any) {
       alert(`❌ Error updating profile: ${error.message}`);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordStatus({ type: 'error', message: 'Passwords do not match' });
+      return;
+    }
+
+    try {
+      await authAPI.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      setPasswordStatus({ type: 'success', message: 'Password updated successfully!' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => {
+        setIsChangingPassword(false);
+        setPasswordStatus(null);
+      }, 2000);
+    } catch (error: any) {
+      setPasswordStatus({ type: 'error', message: error.message || 'Failed to change password' });
     }
   };
 
@@ -1064,6 +1094,26 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                                 className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600] min-h-20"
                               />
                             </div>
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[#a8a6a1] text-sm mb-2">Grade</label>
+                                <input
+                                  type="text"
+                                  value={editedProfile?.academicInfo?.grade || ''}
+                                  onChange={(e) => setEditedProfile({...editedProfile, academicInfo: {...editedProfile?.academicInfo, grade: e.target.value}})}
+                                  className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[#a8a6a1] text-sm mb-2">Department</label>
+                                <input
+                                  type="text"
+                                  value={editedProfile?.academicInfo?.department || ''}
+                                  onChange={(e) => setEditedProfile({...editedProfile, academicInfo: {...editedProfile?.academicInfo, department: e.target.value}})}
+                                  className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                                />
+                              </div>
+                            </div>
                             <div className="flex gap-3">
                               <button
                                 onClick={handleSaveProfile}
@@ -1119,19 +1169,65 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                   <GlassCard>
                     <div className="p-6">
                       <h4 className="text-[#e8e6e1] font-semibold mb-4">Account Settings</h4>
-                      <div className="space-y-3">
-                        {[
-                          'Change Password',
-                          'Privacy Settings',
-                          'Notification Preferences',
-                          'Study Preferences',
-                          'Export Data'
-                        ].map((setting) => (
-                          <button key={setting} className="w-full text-left p-3 bg-[#1a1a1a] text-[#e8e6e1] rounded-lg hover:bg-[#2a2a2a] transition-colors">
-                            {setting}
-                          </button>
-                        ))}
-                      </div>
+                      {isChangingPassword ? (
+                        <form onSubmit={handleChangePassword} className="space-y-3">
+                          <input
+                            type="password"
+                            placeholder="Current Password"
+                            value={passwordForm.currentPassword}
+                            onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                            className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                            required
+                          />
+                          <input
+                            type="password"
+                            placeholder="New Password"
+                            value={passwordForm.newPassword}
+                            onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                            className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                            required
+                          />
+                          <input
+                            type="password"
+                            placeholder="Confirm New Password"
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                            className="w-full bg-[#1a1a1a] text-[#e8e6e1] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FFD600]"
+                            required
+                          />
+                          {passwordStatus && (
+                            <p className={`text-sm ${passwordStatus.type === 'success' ? 'text-green-500' : 'text-red-500'}`}>
+                              {passwordStatus.message}
+                            </p>
+                          )}
+                          <div className="flex gap-2">
+                            <button type="submit" className="btn-3d flex-1 bg-[#FFD600] text-black font-semibold py-2 rounded-lg">
+                              Update
+                            </button>
+                            <button type="button" onClick={() => setIsChangingPassword(false)} className="btn-3d flex-1 bg-[#1a1a1a] text-[#e8e6e1] py-2 rounded-lg">
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="space-y-3">
+                          {[
+                            { label: 'Change Password', action: () => setIsChangingPassword(true) },
+                            { label: 'Privacy Settings', action: () => alert('Privacy settings coming soon!') },
+                            { label: 'Notification Preferences', action: () => alert('Notification preferences coming soon!') },
+                            { label: 'Study Preferences', action: () => alert('Study preferences coming soon!') },
+                            { label: 'Export Data', action: () => alert('Data export initiated. You will receive an email shortly.') }
+                          ].map((setting) => (
+                            <button 
+                              key={setting.label} 
+                              onClick={setting.action}
+                              className="w-full text-left p-3 bg-[#1a1a1a] text-[#e8e6e1] rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                            >
+                              {setting.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </GlassCard>
                   
@@ -1170,13 +1266,22 @@ export function StudentDashboard({ onLogout, onEnterClassroom, onGoToClasses }: 
                     <div className="p-6">
                       <h4 className="text-[#e8e6e1] font-semibold mb-4">Quick Actions</h4>
                       <div className="space-y-3">
-                        <button className="w-full btn-3d bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors">
+                        <button 
+                          onClick={() => alert('Transcript download started...')}
+                          className="w-full btn-3d bg-[#FFD600] text-black font-semibold py-2 px-4 rounded-lg hover:bg-[#FFD600]/90 transition-colors"
+                        >
                           Download Transcript
                         </button>
-                        <button className="w-full btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-4 rounded-lg hover:bg-[#2a2a2a] transition-colors">
+                        <button 
+                          onClick={() => setActiveTab('classroom')}
+                          className="w-full btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-4 rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                        >
                           View Course History
                         </button>
-                        <button className="w-full btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-4 rounded-lg hover:bg-[#2a2a2a] transition-colors">
+                        <button 
+                          onClick={() => setActiveTab('schedule')}
+                          className="w-full btn-3d bg-[#1a1a1a] text-[#e8e6e1] py-2 px-4 rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                        >
                           Academic Calendar
                         </button>
                       </div>

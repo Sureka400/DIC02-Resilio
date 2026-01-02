@@ -283,7 +283,7 @@ router.get('/profile', [authenticate, requireStudent], async (req, res) => {
 router.put('/profile', [authenticate, requireStudent], async (req, res) => {
   try {
     const updates = req.body;
-    const allowedUpdates = ['name', 'profile'];
+    const allowedUpdates = ['name', 'profile', 'academicInfo'];
 
     const updateData = {};
     Object.keys(updates).forEach(key => {
@@ -308,7 +308,8 @@ router.put('/profile', [authenticate, requireStudent], async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        profile: user.profile
+        profile: user.profile,
+        academicInfo: user.academicInfo
       }
     });
   } catch (error) {
